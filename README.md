@@ -75,11 +75,12 @@ npm test           # node --test
 - `js/persona.js`: persona rules
 - `js/slides.js`: card markup
 - `js/places.js`: grid-snapped pins, home area, and trips for the map card
-- `js/mapcard.js`: the map card (Leaflet, drawn from bundled outlines with no tile service)
+- `js/mapcard.js`: the map card, drawn on a canvas from bundled outlines (no map library or tile service)
+- `js/camera.js`: map projection, view fitting, and the smooth zoom-and-pan used between months
 - `js/unzip.js`: reads the CSV out of eBird's zip using the browser's built-in decompression
 - `js/app.js`: upload, navigation, and PNG export
-- `data/map.topo.json`: outlines for the map: Natural Earth countries and lakes, Census state lines, Michigan counties (all public domain). Rebuild with `tools/build-map.mjs`.
-- `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards, [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2) and [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for the map
+- `data/map.topo.json`: outlines for the map: Natural Earth countries (minus Antarctica) and lakes, Census state lines, Michigan counties (all public domain). Rebuild with `tools/build-map.mjs`.
+- `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards and [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for reading the map outlines
 
 ## Privacy
 

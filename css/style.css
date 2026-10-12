@@ -459,7 +459,6 @@ code {
   text-transform: uppercase;
   color: #ffc979;
 }
-.card-map .leaflet-container { background: #0e1630; font-family: var(--sans); }
 .map-inset { opacity: 0; transition: opacity 0.6s ease; }
 .map-inset.shown { opacity: 1; }
 

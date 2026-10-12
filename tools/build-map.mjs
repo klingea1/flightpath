@@ -30,7 +30,11 @@ const slim = (f, props = {}) => ({ type: 'Feature', properties: props, geometry:
 const layers = {
   countries: {
     type: 'FeatureCollection',
-    features: feature(world, world.objects.countries).features.map((f) => slim(f, { name: f.properties.name })),
+    // Antarctica is dead weight for this map, and its outline runs along the
+    // world's bottom edge.
+    features: feature(world, world.objects.countries).features
+      .filter((f) => f.properties.name !== 'Antarctica')
+      .map((f) => slim(f, { name: f.properties.name })),
   },
   states: {
     type: 'FeatureCollection',

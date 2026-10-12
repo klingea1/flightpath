@@ -114,7 +114,7 @@ function settle(card) {
 }
 
 function show(direction = null) {
-  // Leaving the map mid-flight lands it; Leaflet can't draw while hidden.
+  // Leaving the map mid-tour lands it, so it's on its final frame when you return.
   state.cards.forEach((c, i) => { if (i !== state.index && c.mapCtl?.running) c.mapCtl.skip(); });
   state.cards.forEach((c, i) => c.classList.toggle('active', i === state.index));
   enter(state.cards[state.index], direction);
@@ -126,8 +126,8 @@ function show(direction = null) {
   updateReplay();
 }
 
-// Leaflet needs a visible container to measure, so the map draws the first
-// time its card is shown. frame.mapReady lets saving wait for it.
+// The map loads its outlines the first time its card is shown, then plays.
+// frame.mapReady lets sharing wait for it.
 function mountActiveMap() {
   const frame = state.cards[state.index];
   const card = frame.querySelector('.card-map');
