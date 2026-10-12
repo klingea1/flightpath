@@ -103,6 +103,7 @@ function enter(frame, direction) {
   if (direction) frame.classList.add(direction);
   card.classList.add('play');
   if (!reduceMotion) countUp(card);
+  prepareImage(frame);
 }
 
 // Jumps a card to its finished state, for saving.
@@ -168,26 +169,97 @@ function fit() {
   stage.style.setProperty('--scale', scale);
 }
 
-async function saveCard() {
-  const card = state.cards[state.index].querySelector('.card');
-  const btn = $('save');
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-  try {
-    const ctl = await state.cards[state.index].mapReady;
+// Sharing. Phones get the share sheet, where Discord shows up. Desktop share
+// sheets rarely offer Discord, so desktop copies the image for pasting
+// instead. Download is always there as a fallback.
+const SAMPLE_FILE = new File([''], 'card.png', { type: 'image/png' });
+const canShareFiles = Boolean(navigator.canShare?.({ files: [SAMPLE_FILE] }));
+const canCopyImage = typeof ClipboardItem !== 'undefined' && Boolean(navigator.clipboard?.write);
+const touchFirst = window.matchMedia?.('(pointer: coarse)').matches;
+const shareMode = canShareFiles && (touchFirst || !canCopyImage) ? 'share' : canCopyImage ? 'copy' : 'download';
+const SHARE_LABEL = { share: 'Share', copy: 'Copy image', download: 'Save image' }[shareMode];
+
+// Renders a card's finished state to a PNG once, and reuses it. Browsers
+// only allow sharing right after a tap, so images are made ahead of time
+// (see prepareImage) and the tap shares one that's ready.
+let fontCss = null;
+function cardImage(frame) {
+  frame.png ??= (async () => {
+    const ctl = await frame.mapReady;
     if (ctl?.running) await ctl.skip();
+    const card = frame.querySelector('.card');
     settle(card);
-    const url = await window.htmlToImage.toPng(card, { width: CARD_W, height: CARD_H, pixelRatio: 1 });
+    // Embedding the web fonts is the slow part of a render; do it once.
+    fontCss ??= window.htmlToImage.getFontEmbedCSS(card);
+    const fontEmbedCSS = await fontCss;
+    return window.htmlToImage.toBlob(card, { width: CARD_W, height: CARD_H, pixelRatio: 1, fontEmbedCSS });
+  })();
+  frame.png.catch(() => { frame.png = null; });
+  return frame.png;
+}
+
+// Once a card's entrance (or the map's flight) has finished, render its image
+// in the background so Share is instant.
+function prepareImage(frame) {
+  // The map card waits for its flight to land. mapReady is set later in the
+  // same show(), hence the microtask.
+  const ready = frame.querySelector('.card-map')
+    ? Promise.resolve().then(() => frame.mapReady).then((ctl) => ctl?.done)
+    : new Promise((r) => setTimeout(r, 1800));
+  ready.then(() => {
+    if (state.cards[state.index] === frame) cardImage(frame).catch(() => {});
+  });
+}
+
+function fileName() {
+  return `flight-path-${state.year}-${state.index + 1}.png`;
+}
+
+function flash(text) {
+  const btn = $('share');
+  btn.textContent = text;
+  clearTimeout(flash.timer);
+  flash.timer = setTimeout(() => { btn.textContent = SHARE_LABEL; }, 2400);
+}
+
+async function downloadCard() {
+  try {
+    const blob = await cardImage(state.cards[state.index]);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `flight-path-${state.year}-${state.index + 1}.png`;
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName();
     a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   } catch (e) {
-    alert("Sorry, that card couldn't be saved as an image. A screenshot works too.");
     console.error(e);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Save this card';
+    alert("Sorry, that card couldn't be saved as an image. A screenshot works too.");
+  }
+}
+
+async function shareCard() {
+  const frame = state.cards[state.index];
+  if (shareMode === 'share') {
+    try {
+      const blob = await cardImage(frame);
+      await navigator.share({ files: [new File([blob], fileName(), { type: 'image/png' })], title: `My ${state.year} Flight Path` });
+    } catch (e) {
+      if (e.name === 'AbortError') return; // closed the share sheet
+      // The tap "expired" while the image was still being made. It's ready now.
+      if (e.name === 'NotAllowedError') return flash('Ready, tap again');
+      console.error(e);
+      downloadCard();
+    }
+  } else if (shareMode === 'copy') {
+    try {
+      // Handing ClipboardItem the pending image keeps the click's permission.
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': cardImage(frame) })]);
+      flash('Copied! Paste in Discord');
+    } catch (e) {
+      console.error(e);
+      downloadCard();
+    }
+  } else {
+    downloadCard();
   }
 }
 
@@ -226,7 +298,10 @@ $('back').addEventListener('click', () => {
 $('year').addEventListener('change', (e) => { state.year = Number(e.target.value); render(); });
 $('prev').addEventListener('click', () => go(-1));
 $('next').addEventListener('click', () => go(1));
-$('save').addEventListener('click', saveCard);
+$('share').textContent = SHARE_LABEL;
+$('download').hidden = shareMode === 'download';
+$('share').addEventListener('click', shareCard);
+$('download').addEventListener('click', downloadCard);
 $('replay').addEventListener('click', () => {
   const ctl = state.cards[state.index].mapCtl;
   if (ctl) playMap(ctl);

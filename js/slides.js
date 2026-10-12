@@ -172,22 +172,22 @@ function lifersCard(s) {
   </section>`;
 }
 
-function patchCard(s) {
+function spotCard(s) {
   const t = s.topLocation;
   const only = t.only.slice(0, 4);
   return `
-  <section class="card card-patch">
-    <p class="eyebrow">Your top patch</p>
+  <section class="card card-spot">
+    <p class="eyebrow">Your top spot</p>
     <h2 class="card-title${titleSize(t.name)}">${esc(t.name)}</h2>
-    <div class="patch-stats">
+    <div class="spot-stats">
       <div${fx('pop', 250)}><div class="tile-n">${fmt(t.checklists)}</div><div class="tile-l">${t.checklists === 1 ? 'visit' : 'visits'}</div></div>
       <div${fx('pop', 380)}><div class="tile-n">${fmt(t.species)}</div><div class="tile-l">species</div></div>
       <div${fx('pop', 510)}><div class="tile-n">${Math.round(t.share * 100)}%</div><div class="tile-l">of your checklists</div></div>
     </div>
     ${t.only.length
-      ? `<p class="patch-only-label"${fx('rise', 750)}>Only found here this year</p>
+      ? `<p class="spot-only-label"${fx('rise', 750)}>Only found here this year</p>
          <ul class="name-list">${only.map((n, i) => `<li${fx('rise', 850 + i * 100)}>${esc(n)}</li>`).join('')}${t.only.length > only.length ? `<li class="more">and ${t.only.length - only.length} more</li>` : ''}</ul>`
-      : `<p class="patch-note"${fx('rise', 800)}>Everything you found here, you found somewhere else too. A true home base.</p>`}
+      : `<p class="spot-note"${fx('rise', 800)}>Everything you found here, you found somewhere else too. A true home base.</p>`}
     ${footer(s.year)}
   </section>`;
 }
@@ -313,7 +313,7 @@ function summaryCard(s, persona) {
       <div>
         <p class="sum-label">Persona</p>
         <p class="sum-value">${esc(persona.name)}</p>
-        ${s.topLocation ? `<p class="sum-label">Top patch</p><p class="sum-value">${esc(s.topLocation.name)}</p>` : ''}
+        ${s.topLocation ? `<p class="sum-label">Top spot</p><p class="sum-value">${esc(s.topLocation.name)}</p>` : ''}
       </div>
     </div>
     <div class="sum-stats"${fx('rise', 650)}>
@@ -332,7 +332,7 @@ export function buildCards(stats, persona, places) {
     headlineCard(s),
     s.firstList && firstListCard(s),
     s.liferList.length && lifersCard(s),
-    s.topLocation && s.checklists > 1 && patchCard(s),
+    s.topLocation && s.checklists > 1 && spotCard(s),
     s.topSpeciesList.length && topBirdsCard(s),
     s.seenOnce.length && s.checklists >= 10 && seenOnceCard(s),
     monthsCard(s),

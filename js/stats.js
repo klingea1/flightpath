@@ -157,11 +157,11 @@ export function computeYear(rows, year) {
     .map(([name, n]) => ({ name, checklists: n, share: n / lists.length }));
 
   // Species found at the top location and nowhere else this year.
-  let patchOnly = [];
+  let spotOnly = [];
   if (topLoc) {
     const elsewhere = new Set();
     for (const c of lists) if (c.locationId !== topLoc[0]) for (const sp of c.species) elsewhere.add(sp);
-    patchOnly = [...locationSpecies.get(topLoc[0])].filter((sp) => !elsewhere.has(sp)).sort(byTaxon);
+    spotOnly = [...locationSpecies.get(topLoc[0])].filter((sp) => !elsewhere.has(sp)).sort(byTaxon);
   }
 
   // Birds that showed up on exactly one checklist, in the order you saw them.
@@ -223,7 +223,7 @@ export function computeYear(rows, year) {
       checklists: topLoc[1],
       species: locationSpecies.get(topLoc[0]).size,
       share: topLoc[1] / lists.length,
-      only: patchOnly,
+      only: spotOnly,
     },
     topSpecies: topSpeciesList[0] || null,
     bigDay: bigDay && { date: bigDay[0], species: bigDay[1] },

@@ -122,7 +122,7 @@ test('a zip without a CSV gives a friendly error', async () => {
   await assert.rejects(csvFromZip(bytes), /no CSV/);
 });
 
-test('first checklist, top birds, patch-only species, and months', () => {
+test('first checklist, top birds, spot-only species, and months', () => {
   const rows = parseEbirdExport(csv([
     'S2,Mallard,b,452,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-01-01,09:00,Stationary,30,1,',
     'S1,Blue Jay,a,19500,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-01-01,07:00,Stationary,30,1,',

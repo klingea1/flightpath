@@ -7,8 +7,8 @@ const pct = (x) => `${Math.round(x * 100)}%`;
 
 export const PERSONAS = [
   {
-    id: 'patch',
-    name: 'Patch Loyalist',
+    id: 'regular',
+    name: 'The Regular',
     score: (s) => (s.topLocation ? s.topLocation.share / 0.5 : 0),
     blurb: (s) => `You know every bush at ${s.topLocation.name} by name.`,
     evidence: (s) => `${pct(s.topLocation.share)} of your checklists came from one spot`,

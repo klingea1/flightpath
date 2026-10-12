@@ -11,8 +11,12 @@ there is no server, account, or database.
 1. Request your data at [ebird.org/downloadMyData](https://ebird.org/downloadMyData).
    eBird emails a zip containing `MyEBirdData.csv`.
 2. Open the site and drop the zip in, or the CSV inside it.
-3. Tap through the cards and save the ones you want to post. Cards are
-   1080x1350 (4:5), which displays well inline in Discord.
+3. Tap through the cards and share the ones you want to post. On phones,
+   Share opens the share sheet (Discord is in it). On desktop it's Copy
+   image: click it, then paste into Discord. A download button is always
+   there too. Cards are 1080x1350 (4:5), which displays well inline in
+   Discord. Each card's image is made in the background once it's on
+   screen, so sharing is instant.
 
 ## Cards so far
 
@@ -23,7 +27,7 @@ there is no server, account, or database.
    day's totals. The export doesn't record which bird came first, so this is
    the checklist, not the bird.
 4. **Lifers**: new species in the order you found them. Skipped if there were none.
-5. **Top patch**: your most-visited location and any species you found only there.
+5. **Top spot**: your most-visited location and any species you found only there.
 6. **Top birds**: top five species by how many of your checklists they appeared on.
    When #1 is a Kent County staple, the card admits it.
 7. **Seen exactly once**: birds that showed up on a single checklist all year.
@@ -43,12 +47,12 @@ there is no server, account, or database.
    you birded that month, and all of that month's places bloom at once
    (new places pop in, revisited ones grow). Any year plays in about 12
    seconds, however much someone traveled. Tapping skips to the end,
-   Replay runs it again, and saving always captures the final frame. With
+   Replay runs it again, and sharing always captures the final frame. With
    reduced motion turned on, the card shows the final frame directly.
 12. **Summary**: the whole year on one card, the one most worth posting.
 
 Each card animates once as it's shown (counts tick up, lists cascade, bars
-grow) and then holds still. Saving freezes the finished card first, so the
+grow) and then holds still. Sharing freezes the finished card first, so the
 image is never caught mid-animation. Reduced motion turns entrances off.
 
 ## Development

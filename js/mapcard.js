@@ -139,7 +139,7 @@ function newMap(L, host) {
   return L.map(host, { ...STATIC, maxZoom: MAX_ZOOM });
 }
 
-// Grows bounds to at least minKm across, so a single patch still shows its
+// Grows bounds to at least minKm across, so a single spot still shows its
 // neighboring counties instead of filling the card with one county.
 function atLeast(bounds, minKm) {
   const [[s, w], [n, e]] = bounds;
