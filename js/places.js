@@ -84,7 +84,7 @@ export function buildPlaces(lists) {
       pins.push(pin);
     }
     pin.visits++;
-    sequence.push({ pin: pins.indexOf(pin), date: c.date });
+    sequence.push({ pin: pins.indexOf(pin), date: c.date, location: c.location, state: c.state });
   }
   if (!pins.length) return null;
 
@@ -97,7 +97,8 @@ export function buildPlaces(lists) {
     const n = nearbyVisits(p) * 1000 + p.visits;
     if (n > best) { best = n; anchor = p; }
   }
-  const home = pins.filter((p) => distanceKm(p, anchor) <= HOME_RADIUS_KM);
+  for (const p of pins) p.home = distanceKm(p, anchor) <= HOME_RADIUS_KM;
+  const home = pins.filter((p) => p.home);
   const homeBounds = boundsOf(home);
   const allBounds = boundsOf(pins);
 
@@ -122,4 +123,41 @@ export function buildPlaces(lists) {
     // The card then adds an inset of the home area.
     needsInset: home.length < pins.length && spanKm(allBounds) > Math.max(250, 4 * spanKm(homeBounds)),
   };
+}
+
+// Location names that could locate someone: coordinates, or words that mark a
+// private place. Trip labels fall back to the region name for these.
+const PRIVATE_NAME = /-?\d{1,3}\.\d{2,}|\b(yard|home|house|backyard|residence|feeders?|cottage|cabin|apartment|condo|farm)\b/i;
+
+export function tripLabel(location, state) {
+  const region = regionName(state);
+  const name = String(location || '').trim();
+  if (!name || PRIVATE_NAME.test(name) || name.length > 40) return region;
+  return `${name}, ${region}`;
+}
+
+// A trip stays one leg while its stops are within this distance of where it started.
+const LEG_KM = 150;
+
+// Splits the year into legs: stretches at home, and trips away. The map card
+// flies between legs and plays each leg's visits in order.
+export function buildLegs(places) {
+  const legs = [];
+  for (const v of places.sequence) {
+    const pin = places.pins[v.pin];
+    const last = legs[legs.length - 1];
+    const sameLeg = last && (pin.home
+      ? last.home
+      : !last.home && distanceKm(places.pins[last.visits[0].pin], pin) <= LEG_KM);
+    if (sameLeg) {
+      last.visits.push(v);
+    } else {
+      legs.push({ home: pin.home, visits: [v], label: pin.home ? null : tripLabel(v.location, v.state) });
+    }
+  }
+  for (const leg of legs) {
+    const pts = leg.visits.map((v) => places.pins[v.pin]);
+    leg.bounds = boundsOf(pts);
+  }
+  return legs;
 }

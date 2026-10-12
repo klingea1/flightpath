@@ -36,7 +36,14 @@ there is no server, account, or database.
    are snapped to a grid of about 2 km so nobody's yard is identifiable, and
    repeat visits grow a pin instead of adding one. Out-of-state travel is
    named, and when it zooms the map far out, an inset shows home. The map
-   loads only when this card is reached. (The animated flight is next.)
+   loads only when this card is reached.
+
+   The card plays your year as a flight: pins pop in by date at home, and
+   the camera flies out to each trip (labeled, unless the location name
+   looks private) and back. Home pins and flights each have a time budget,
+   so most years play in 10 to 20 seconds. Tapping skips to the end, Replay
+   runs it again, and saving always captures the final frame. With reduced
+   motion turned on, the card shows the final frame directly.
 12. **Summary**: the whole year on one card, the one most worth posting.
 
 ## Development

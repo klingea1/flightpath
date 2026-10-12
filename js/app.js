@@ -60,11 +60,15 @@ function render() {
 }
 
 function show() {
+  // Leaving the map mid-flight lands it; Leaflet can't draw while hidden.
+  state.cards.forEach((c, i) => { if (i !== state.index && c.mapCtl?.running) c.mapCtl.skip(); });
   state.cards.forEach((c, i) => c.classList.toggle('active', i === state.index));
+  state.cards[state.index].mapCtl?.refresh();
   [...$('progress').children].forEach((b, i) => b.classList.toggle('done', i <= state.index));
   $('prev').disabled = state.index === 0;
   $('next').disabled = state.index === state.cards.length - 1;
   mountActiveMap();
+  updateReplay();
 }
 
 // Leaflet needs a visible container to measure, so the map draws the first
@@ -73,10 +77,27 @@ function mountActiveMap() {
   const frame = state.cards[state.index];
   const card = frame.querySelector('.card-map');
   if (!card || frame.mapReady) return;
-  frame.mapReady = mountMap(card, state.places, state.stats).catch((e) => {
-    console.error(e);
-    card.querySelector('.map-host').textContent = "The map couldn't load.";
-  });
+  frame.mapReady = mountMap(card, state.places, state.stats)
+    .then((ctl) => {
+      frame.mapCtl = ctl;
+      playMap(ctl);
+      return ctl;
+    })
+    .catch((e) => {
+      console.error(e);
+      card.querySelector('.map-host').textContent = "The map couldn't load.";
+    });
+}
+
+function playMap(ctl) {
+  $('replay').hidden = true;
+  ctl.play().then(() => updateReplay());
+}
+
+// Replay shows on the map card once its flight has finished.
+function updateReplay() {
+  const ctl = state.cards[state.index]?.mapCtl;
+  $('replay').hidden = !ctl || ctl.running;
 }
 
 function go(delta) {
@@ -97,7 +118,8 @@ async function saveCard() {
   btn.disabled = true;
   btn.textContent = 'Saving...';
   try {
-    await state.cards[state.index].mapReady;
+    const ctl = await state.cards[state.index].mapReady;
+    if (ctl?.running) await ctl.skip();
     const url = await window.htmlToImage.toPng(card, { width: CARD_W, height: CARD_H, pixelRatio: 1 });
     const a = document.createElement('a');
     a.href = url;
@@ -148,7 +170,14 @@ $('year').addEventListener('change', (e) => { state.year = Number(e.target.value
 $('prev').addEventListener('click', () => go(-1));
 $('next').addEventListener('click', () => go(1));
 $('save').addEventListener('click', saveCard);
+$('replay').addEventListener('click', () => {
+  const ctl = state.cards[state.index].mapCtl;
+  if (ctl) playMap(ctl);
+});
 $('stage').addEventListener('click', (e) => {
+  // A tap during the flight skips to its end instead of leaving the card.
+  const ctl = state.cards[state.index].mapCtl;
+  if (ctl?.running) { ctl.skip(); return; }
   const r = $('stage').getBoundingClientRect();
   go(e.clientX - r.left < r.width / 3 ? -1 : 1);
 });
