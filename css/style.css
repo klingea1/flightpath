@@ -526,3 +526,8 @@ code {
   .card.play [data-fx],
   .card-frame > .card { animation: none !important; }
 }
+
+/* Summary highlights: two columns of label and value. */
+.sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px 48px; }
+.sum-grid .sum-label { margin-bottom: 8px; }
+.sum-grid .sum-value { margin: 0; font-size: 44px; line-height: 1.1; text-wrap: balance; }

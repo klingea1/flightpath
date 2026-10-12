@@ -2,6 +2,7 @@
 // that reads best inline in Discord, and is scaled down to fit the screen.
 
 import { mapCardHtml } from './mapcard.js';
+import { pickHighlights } from './highlights.js';
 
 export const CARD_W = 1080;
 export const CARD_H = 1350;
@@ -305,16 +306,12 @@ function summaryCard(s, persona) {
       <div class="sum-big">${fmt(s.species)}</div>
       <div class="sum-big-label">species</div>
     </div>
-    <div class="sum-cols"${fx('rise', 400)}>
-      <div>
-        <p class="sum-label">Top birds</p>
-        <ol class="sum-list">${s.topSpeciesList.map((b) => `<li>${esc(b.name)}</li>`).join('')}</ol>
-      </div>
-      <div>
-        <p class="sum-label">Persona</p>
-        <p class="sum-value">${esc(persona.name)}</p>
-        ${s.topLocation ? `<p class="sum-label">Top spot</p><p class="sum-value">${esc(s.topLocation.name)}</p>` : ''}
-      </div>
+    <div class="sum-grid">
+      ${[
+        ...pickHighlights(s),
+        { label: 'Persona', value: persona.name },
+        s.topLocation && { label: 'Top spot', value: s.topLocation.name },
+      ].filter(Boolean).map((h, i) => `<div${fx('rise', 350 + i * 90)}><p class="sum-label">${esc(h.label)}</p><p class="sum-value">${esc(h.value)}</p></div>`).join('')}
     </div>
     <div class="sum-stats"${fx('rise', 650)}>
       <div><b>${fmt(s.checklists)}</b> checklists</div>

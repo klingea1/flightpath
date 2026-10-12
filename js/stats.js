@@ -212,6 +212,16 @@ export function computeYear(rows, year) {
     seenOnce,
     grind,
     firstYearOnEbird: earliestEver.startsWith(prefix),
+    homeRegion: regionYearList(lists),
+    previousYearSpecies: new Set(
+      allLists.filter((c) => c.date.startsWith(String(year - 1))).flatMap((c) => [...c.species])
+    ).size,
+    regions: [...new Set(lists.map((c) => c.state).filter(Boolean))],
+    // A lifer that showed up on a single checklist: usually a chase or a
+    // lucky find. Meaningless in someone's first year, when everything is new.
+    birdOfYear: earliestEver.startsWith(prefix)
+      ? null
+      : lifers.find((name) => speciesLists.get(name) === 1) || null,
     hours: minutes / 60,
     miles,
     daysAfield: daySpecies.size,
@@ -242,6 +252,16 @@ export function computeYear(rows, year) {
       : 0,
     lists,
   };
+}
+
+// The state or province with the most checklists, and its year list.
+function regionYearList(lists) {
+  const counts = new Map();
+  for (const c of lists) if (c.state) counts.set(c.state, (counts.get(c.state) || 0) + 1);
+  const top = topBy(counts);
+  if (!top) return null;
+  const species = new Set(lists.filter((c) => c.state === top[0]).flatMap((c) => [...c.species]));
+  return { code: top[0], species: species.size };
 }
 
 // Michigan counties on the Lake Michigan shore, the usual migration day trips

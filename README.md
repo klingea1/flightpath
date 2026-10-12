@@ -49,7 +49,12 @@ there is no server, account, or database.
    seconds, however much someone traveled. Tapping skips to the end,
    Replay runs it again, and sharing always captures the final frame. With
    reduced motion turned on, the card shows the final frame directly.
-12. **Summary**: the whole year on one card, the one most worth posting.
+12. **Summary**: the whole year on one card, the one most worth posting. Instead
+   of top birds (the same for everyone), it shows four highlights picked for
+   each birder in `js/highlights.js`: their home state's year list, their bird
+   of the year (a lifer seen on just one checklist, usually a chase), then the
+   most impressive of growth over last year, biggest day, longest streak,
+   lifers, and states visited, with modest fallbacks for lighter years.
 
 Each card animates once as it's shown (counts tick up, lists cascade, bars
 grow) and then holds still. Sharing freezes the finished card first, so the
@@ -73,6 +78,7 @@ npm test           # node --test
 - `js/parse.js`: CSV parsing and column normalization (handles the header variants eBird has used)
 - `js/stats.js`: per-year numbers: species, lifers, effort, streaks, top location
 - `js/persona.js`: persona rules
+- `js/highlights.js`: picks the summary card's highlights
 - `js/slides.js`: card markup
 - `js/places.js`: grid-snapped pins, home area, and trips for the map card
 - `js/mapcard.js`: the map card, drawn on a canvas from bundled outlines (no map library or tile service)
