@@ -109,13 +109,41 @@ export function computeYear(rows, year) {
     }
   }
 
+  // Taxonomic order lets species lists read the way a field guide does.
+  const taxon = new Map();
+  for (const r of rows) {
+    const key = speciesKey(r.commonName);
+    if (key && r.taxonOrder !== null && !(taxon.get(key) <= r.taxonOrder)) taxon.set(key, r.taxonOrder);
+  }
+  const byTaxon = (a, b) => (taxon.get(a) ?? Infinity) - (taxon.get(b) ?? Infinity) || a.localeCompare(b);
+
   const lifers = [...species]
     .filter((s) => firstSeen.get(s).startsWith(prefix))
-    .sort((a, b) => firstSeen.get(a).localeCompare(firstSeen.get(b)));
+    .sort((a, b) => firstSeen.get(a).localeCompare(firstSeen.get(b)) || byTaxon(a, b));
 
   const topLoc = topBy(locationLists);
-  const topSpecies = topBy(speciesLists);
   const bigDay = topBy(new Map([...daySpecies].map(([d, s]) => [d, s.size])));
+
+  const chronological = [...lists].sort(
+    (a, b) => a.date.localeCompare(b.date) || (a.startMin ?? 0) - (b.startMin ?? 0)
+  );
+  const first = chronological[0];
+
+  const topSpeciesList = [...speciesLists]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 5)
+    .map(([name, n]) => ({ name, checklists: n, share: n / lists.length }));
+
+  // Species found at the top location and nowhere else this year.
+  let patchOnly = [];
+  if (topLoc) {
+    const elsewhere = new Set();
+    for (const c of lists) if (c.locationId !== topLoc[0]) for (const sp of c.species) elsewhere.add(sp);
+    patchOnly = [...locationSpecies.get(topLoc[0])].filter((sp) => !elsewhere.has(sp)).sort(byTaxon);
+  }
+
+  const monthly = Array(12).fill(0);
+  for (const c of lists) monthly[Number(c.date.slice(5, 7)) - 1]++;
 
   const timed = lists.filter((c) => c.startMin !== null);
   const share = (pred, pool = lists) => (pool.length ? pool.filter(pred).length / pool.length : 0);
@@ -127,6 +155,15 @@ export function computeYear(rows, year) {
     checklists: lists.length,
     species: species.size,
     lifers,
+    liferList: lifers.map((name) => ({ name, date: firstSeen.get(name) })),
+    firstList: first && {
+      date: first.date,
+      startMin: first.startMin,
+      location: first.location,
+      species: [...first.species].sort(byTaxon),
+    },
+    topSpeciesList,
+    monthly,
     firstYearOnEbird: earliestEver.startsWith(prefix),
     hours: minutes / 60,
     miles,
@@ -139,12 +176,9 @@ export function computeYear(rows, year) {
       checklists: topLoc[1],
       species: locationSpecies.get(topLoc[0]).size,
       share: topLoc[1] / lists.length,
+      only: patchOnly,
     },
-    topSpecies: topSpecies && {
-      name: topSpecies[0],
-      checklists: topSpecies[1],
-      share: topSpecies[1] / lists.length,
-    },
+    topSpecies: topSpeciesList[0] || null,
     bigDay: bigDay && { date: bigDay[0], species: bigDay[1] },
     // Shares feed the persona picker.
     shares: {

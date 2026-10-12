@@ -119,3 +119,25 @@ test('a zip without a CSV gives a friendly error', async () => {
   const bytes = new Uint8Array(readFileSync(new URL('fixtures/no-csv.zip', import.meta.url)));
   await assert.rejects(csvFromZip(bytes), /no CSV/);
 });
+
+test('first checklist, top birds, patch-only species, and months', () => {
+  const rows = parseEbirdExport(csv([
+    'S2,Mallard,b,452,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-01-01,09:00,Stationary,30,1,',
+    'S1,Blue Jay,a,19500,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-01-01,07:00,Stationary,30,1,',
+    'S1,Canada Goose,c,390,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-01-01,07:00,Stationary,30,1,',
+    'S3,Blue Jay,a,19500,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-05-04,07:00,Stationary,30,1,',
+    'S3,Snowy Owl,d,11500,1,US-MI,Kent,L1,Home,42.9,-85.6,2026-05-04,07:00,Stationary,30,1,',
+    'S4,Blue Jay,a,19500,1,US-MI,Kent,L2,Away,43.0,-85.7,2026-05-05,07:00,Stationary,30,1,',
+    'S4,Mallard,b,452,1,US-MI,Kent,L2,Away,43.0,-85.7,2026-05-05,07:00,Stationary,30,1,',
+  ]));
+  const s = computeYear(rows, 2026);
+  // Earliest by time, species in taxonomic order.
+  assert.equal(s.firstList.startMin, 7 * 60);
+  assert.deepEqual(s.firstList.species, ['Canada Goose', 'Blue Jay']);
+  assert.deepEqual(s.topSpeciesList.map((b) => b.name), ['Blue Jay', 'Mallard', 'Canada Goose', 'Snowy Owl']);
+  assert.equal(s.topSpecies.name, 'Blue Jay');
+  assert.equal(s.topLocation.name, 'Home');
+  assert.deepEqual(s.topLocation.only, ['Canada Goose', 'Snowy Owl']);
+  assert.equal(s.monthly[0], 3);
+  assert.equal(s.monthly[4], 2);
+});

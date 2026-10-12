@@ -14,6 +14,18 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 }
 
+function formatTime(min) {
+  if (min === null || min === undefined) return '';
+  const h = Math.floor(min / 60);
+  const m = String(min % 60).padStart(2, '0');
+  return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+
+const plural = (n, one, many = one + 's') => `${fmt(n)} ${n === 1 ? one : many}`;
+
 function footer(year) {
   return `<footer class="card-foot"><span>Flight Path</span><span>${year}</span></footer>`;
 }
@@ -32,7 +44,7 @@ function flightPathSvg(lists, w, h) {
   const ys = pts.map((p) => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = 70;
+  const pad = Math.min(70, w * 0.08);
   const span = Math.max(maxX - minX, maxY - minY) || 1;
   const scale = Math.min(w - pad * 2, h - pad * 2) / span;
   const ox = (w - (maxX - minX) * scale) / 2;
@@ -95,7 +107,6 @@ function headlineCard(s) {
     <div class="tiles">
       ${tiles.map(([n, l]) => `<div class="tile"><div class="tile-n">${n}</div><div class="tile-l">${esc(l)}</div></div>`).join('')}
     </div>
-    ${s.topLocation ? `<p class="headline-note">Most visited: <strong>${esc(s.topLocation.name)}</strong>, ${fmt(s.topLocation.checklists)} checklists</p>` : ''}
     ${footer(s.year)}
   </section>`;
 }
@@ -111,6 +122,159 @@ function personaCard(s, persona) {
   </section>`;
 }
 
+function firstListCard(s) {
+  const f = s.firstList;
+  const shown = f.species.slice(0, 8);
+  const more = f.species.length - shown.length;
+  const when = [formatDate(f.date), formatTime(f.startMin)].filter(Boolean).join(', ');
+  return `
+  <section class="card card-first">
+    <p class="eyebrow">Your ${s.year} started</p>
+    <h2 class="card-title">${esc(f.location)}</h2>
+    <p class="card-sub">${esc(when)} &middot; ${plural(f.species.length, 'species', 'species')}</p>
+    <ul class="name-list">
+      ${shown.map((n) => `<li>${esc(n)}</li>`).join('')}
+      ${more > 0 ? `<li class="more">and ${more} more</li>` : ''}
+    </ul>
+    ${footer(s.year)}
+  </section>`;
+}
+
+function lifersCard(s) {
+  const firstYear = s.firstYearOnEbird;
+  const list = s.liferList;
+  const shown = list.slice(0, 7);
+  const more = list.length - shown.length;
+  return `
+  <section class="card card-lifers">
+    <p class="eyebrow">${firstYear ? 'Your life list begins' : `New to your life list in ${s.year}`}</p>
+    <div class="big-number">${fmt(list.length)}</div>
+    <p class="big-label">${firstYear ? 'species and counting' : list.length === 1 ? 'lifer' : 'lifers'}</p>
+    <ul class="dated-list">
+      ${shown.map((l) => `<li><span>${esc(l.name)}</span><span>${formatDate(l.date)}</span></li>`).join('')}
+      ${more > 0 ? `<li class="more"><span>and ${more} more</span></li>` : ''}
+    </ul>
+    ${footer(s.year)}
+  </section>`;
+}
+
+function patchCard(s) {
+  const t = s.topLocation;
+  const only = t.only.slice(0, 4);
+  return `
+  <section class="card card-patch">
+    <p class="eyebrow">Your top patch</p>
+    <h2 class="card-title">${esc(t.name)}</h2>
+    <div class="patch-stats">
+      <div><div class="tile-n">${fmt(t.checklists)}</div><div class="tile-l">${t.checklists === 1 ? 'visit' : 'visits'}</div></div>
+      <div><div class="tile-n">${fmt(t.species)}</div><div class="tile-l">species</div></div>
+      <div><div class="tile-n">${Math.round(t.share * 100)}%</div><div class="tile-l">of your checklists</div></div>
+    </div>
+    ${t.only.length
+      ? `<p class="patch-only-label">Only found here this year</p>
+         <ul class="name-list">${only.map((n) => `<li>${esc(n)}</li>`).join('')}${t.only.length > only.length ? `<li class="more">and ${t.only.length - only.length} more</li>` : ''}</ul>`
+      : `<p class="patch-note">Everything you found here, you found somewhere else too. A true home base.</p>`}
+    ${footer(s.year)}
+  </section>`;
+}
+
+function topBirdsCard(s) {
+  const [top, ...rest] = s.topSpeciesList;
+  return `
+  <section class="card card-birds">
+    <p class="eyebrow">Your top birds</p>
+    <div class="top-one">
+      <span class="rank">No. 1</span>
+      <h2 class="card-title">${esc(top.name)}</h2>
+      <p class="card-sub">On ${Math.round(top.share * 100)}% of your checklists, ${plural(top.checklists, 'list')} in all</p>
+    </div>
+    <ol class="rank-list" start="2">
+      ${rest.map((b, i) => `<li><span class="rank">${i + 2}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
+    </ol>
+    ${footer(s.year)}
+  </section>`;
+}
+
+// Checklists per month as a single-series bar chart. One accent marks the
+// busiest month, which is also the only bar with a value label.
+function monthsCard(s) {
+  const w = 904, h = 560, base = 500, top = 60;
+  const max = Math.max(...s.monthly);
+  const peak = s.monthly.indexOf(max);
+  const slot = w / 12;
+  const barW = slot - 18;
+  const bars = s.monthly.map((n, i) => {
+    const x = i * slot + 9;
+    const bh = max ? (n / max) * (base - top) : 0;
+    const label = `<text class="m-label" x="${(x + barW / 2).toFixed(1)}" y="${base + 44}">${MONTHS[i][0]}</text>`;
+    if (!n) return label;
+    const y = base - bh;
+    const r = Math.min(8, bh);
+    // Rounded top, square base.
+    const d = `M${x} ${base} V${(y + r).toFixed(1)} Q${x} ${y.toFixed(1)} ${x + r} ${y.toFixed(1)} H${x + barW - r} Q${x + barW} ${y.toFixed(1)} ${x + barW} ${(y + r).toFixed(1)} V${base} Z`;
+    const value = i === peak ? `<text class="m-value" x="${(x + barW / 2).toFixed(1)}" y="${(y - 16).toFixed(1)}">${n}</text>` : '';
+    return `<path class="${i === peak ? 'm-bar peak' : 'm-bar'}" d="${d}"/>${value}${label}`;
+  }).join('');
+
+  return `
+  <section class="card card-months">
+    <p class="eyebrow">Your year, month by month</p>
+    <h2 class="card-title">${max ? `${MONTHS[peak]} was your month` : 'A quiet year'}</h2>
+    <p class="card-sub">${plural(max, 'checklist')} in ${MONTHS[peak]}</p>
+    <svg class="months-chart" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img"
+         aria-label="Checklists per month: ${s.monthly.map((n, i) => `${MONTHS[i]} ${n}`).join(', ')}">
+      <line class="m-base" x1="0" x2="${w}" y1="${base}" y2="${base}"/>
+      ${bars}
+    </svg>
+    ${footer(s.year)}
+  </section>`;
+}
+
+function summaryCard(s, persona) {
+  return `
+  <section class="card card-summary">
+    <div class="sum-head">
+      <div>
+        <p class="eyebrow">My ${s.year}</p>
+        <h2>Flight Path</h2>
+      </div>
+      ${flightPathSvg(s.lists, 380, 300).replace('class="path-art"', 'class="path-art mini"')}
+    </div>
+    <div class="sum-hero">
+      <div class="sum-big">${fmt(s.species)}</div>
+      <div class="sum-big-label">species</div>
+    </div>
+    <div class="sum-cols">
+      <div>
+        <p class="sum-label">Top birds</p>
+        <ol class="sum-list">${s.topSpeciesList.map((b) => `<li>${esc(b.name)}</li>`).join('')}</ol>
+      </div>
+      <div>
+        <p class="sum-label">Persona</p>
+        <p class="sum-value">${esc(persona.name)}</p>
+        ${s.topLocation ? `<p class="sum-label">Top patch</p><p class="sum-value">${esc(s.topLocation.name)}</p>` : ''}
+      </div>
+    </div>
+    <div class="sum-stats">
+      <div><b>${fmt(s.checklists)}</b> checklists</div>
+      <div><b>${fmt(s.hours)}</b> hours</div>
+      <div><b>${fmt(s.miles)}</b> miles</div>
+    </div>
+    ${footer(s.year)}
+  </section>`;
+}
+
 export function buildCards(stats, persona) {
-  return [coverCard(stats), headlineCard(stats), personaCard(stats, persona)];
+  const s = stats;
+  return [
+    coverCard(s),
+    headlineCard(s),
+    s.firstList && firstListCard(s),
+    s.liferList.length && lifersCard(s),
+    s.topLocation && s.checklists > 1 && patchCard(s),
+    s.topSpeciesList.length && topBirdsCard(s),
+    monthsCard(s),
+    personaCard(s, persona),
+    summaryCard(s, persona),
+  ].filter(Boolean);
 }

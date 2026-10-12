@@ -16,13 +16,20 @@ there is no server, account, or database.
 
 ## Cards so far
 
-- **Cover**: every checklist location connected in date order, drawn as your flight path.
-- **Headline numbers**: species, checklists, hours, miles traveled, lifers (or days
-  afield in your first year on eBird), locations, and biggest day.
-- **Persona**: one of a set of birding personas, with the three stats that
-  back it up. Logic is in `js/persona.js`. Thresholds are first guesses to
-  tune against real exports. Add `?persona=<id>` to the URL to preview any
-  persona's card (for example, `?persona=lakeshore`).
+1. **Cover**: every checklist location connected in date order, drawn as your flight path.
+2. **Headline numbers**: species, checklists, hours, miles traveled, lifers (or days
+   afield in your first year on eBird), locations, and biggest day.
+3. **First checklist of the year**: where, when, and what was on it. The export
+   doesn't record which bird came first, so this is the checklist, not the bird.
+4. **Lifers**: new species in the order you found them. Skipped if there were none.
+5. **Top patch**: your most-visited location and any species you found only there.
+6. **Top birds**: top five species by how many of your checklists they appeared on.
+7. **Months**: checklists per month, with your busiest month called out.
+8. **Persona**: one of a set of birding personas, with the three stats that
+   back it up. Logic is in `js/persona.js`. Thresholds are first guesses to
+   tune against real exports. Add `?persona=<id>` to the URL to preview any
+   persona's card (for example, `?persona=lakeshore`).
+9. **Summary**: the whole year on one card, the one most worth posting.
 
 ## Development
 
