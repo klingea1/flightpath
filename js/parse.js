@@ -28,39 +28,51 @@ const REQUIRED = ['submissionId', 'commonName', 'date'];
 const KM_TO_MI = 0.621371;
 
 // RFC 4180 CSV: quoted fields, escaped quotes, CRLF or LF line endings.
+// Calls onRecord(fields) for each record. The fields array is reused between
+// calls, so copy it to keep it. Fields are sliced out whole rather than
+// built a character at a time, which matters for 50+ MB exports.
+export function eachRecord(text, onRecord) {
+  const n = text.length;
+  let i = text.charCodeAt(0) === 0xfeff ? 1 : 0;
+  const fields = [];
+  while (i < n) {
+    fields.length = 0;
+    for (;;) {
+      if (text.charCodeAt(i) === 34) {
+        // Quoted field: runs to the next lone quote; "" is an escaped quote.
+        let value = '';
+        let j = i + 1;
+        for (;;) {
+          const q = text.indexOf('"', j);
+          if (q === -1) { value += text.slice(j); i = n; break; }
+          if (text.charCodeAt(q + 1) === 34) { value += text.slice(j, q + 1); j = q + 2; continue; }
+          value += text.slice(j, q);
+          i = q + 1;
+          break;
+        }
+        fields.push(value);
+      } else {
+        let j = i;
+        while (j < n) {
+          const c = text.charCodeAt(j);
+          if (c === 44 || c === 10 || c === 13) break;
+          j++;
+        }
+        fields.push(text.slice(i, j));
+        i = j;
+      }
+      if (text.charCodeAt(i) === 44) { i++; continue; }
+      if (text.charCodeAt(i) === 13) i++;
+      if (text.charCodeAt(i) === 10) i++;
+      break;
+    }
+    if (fields.length > 1 || fields[0] !== '') onRecord(fields);
+  }
+}
+
 export function parseCsv(text) {
   const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      } else {
-        field += c;
-      }
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ',') {
-      row.push(field); field = '';
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(field); field = '';
-      if (row.length > 1 || row[0] !== '') rows.push(row);
-      row = [];
-    } else {
-      field += c;
-    }
-  }
-  if (field !== '' || row.length) {
-    row.push(field);
-    if (row.length > 1 || row[0] !== '') rows.push(row);
-  }
+  eachRecord(text, (fields) => rows.push([...fields]));
   return rows;
 }
 
@@ -119,46 +131,65 @@ function num(s) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Values that repeat across rows (names, places, dates) are stored once, and
+// per-checklist conversions are cached, which keeps big exports small in memory.
+function memo(fn) {
+  const cache = new Map();
+  return (key) => {
+    let v = cache.get(key);
+    if (v === undefined) { v = fn(key); cache.set(key, v); }
+    return v;
+  };
+}
+
 export function parseEbirdExport(text) {
-  const table = parseCsv(text);
-  if (table.length < 2) throw new Error('That file has no observations in it.');
-  const idx = mapHeaders(table[0]);
-  const get = (r, key) => (key in idx ? (r[idx[key]] ?? '').trim() : '');
-
+  const intern = memo((s) => s);
+  const toDate = memo(normalizeDate);
+  const toTime = memo(parseTime);
+  const toProtocol = memo(normalizeProtocol);
+  let idx = null;
   const rows = [];
-  for (const r of table.slice(1)) {
-    const date = normalizeDate(get(r, 'date'));
-    const commonName = get(r, 'commonName');
-    if (!date || !commonName) continue;
 
-    let distanceMi = num(get(r, 'distanceMi'));
+  eachRecord(text, (r) => {
+    if (!idx) { idx = mapHeaders(r); return; }
+    const get = (key) => {
+      const j = idx[key];
+      return j === undefined ? '' : (r[j] ?? '').trim();
+    };
+    const date = toDate(get('date'));
+    const commonName = get('commonName');
+    if (!date || !commonName) return;
+
+    let distanceMi = num(get('distanceMi'));
     if (distanceMi === null) {
-      const km = num(get(r, 'distanceKm'));
+      const km = num(get('distanceKm'));
       distanceMi = km === null ? null : km * KM_TO_MI;
     }
-    const countRaw = get(r, 'count');
+    const countRaw = get('count');
+    const location = intern(get('location'));
 
     rows.push({
-      submissionId: get(r, 'submissionId'),
-      commonName,
-      sciName: get(r, 'sciName'),
-      taxonOrder: num(get(r, 'taxonOrder')),
+      submissionId: intern(get('submissionId')),
+      commonName: intern(commonName),
+      sciName: intern(get('sciName')),
+      taxonOrder: num(get('taxonOrder')),
       count: countRaw.toUpperCase() === 'X' ? null : num(countRaw),
-      state: get(r, 'state'),
-      county: get(r, 'county'),
-      location: get(r, 'location'),
-      locationId: get(r, 'locationId') || get(r, 'location'),
-      lat: num(get(r, 'lat')),
-      lng: num(get(r, 'lng')),
-      date,
-      startMin: parseTime(get(r, 'time')),
-      protocol: normalizeProtocol(get(r, 'protocol')),
-      durationMin: num(get(r, 'duration')),
-      allObs: get(r, 'allObs') === '1',
+      state: intern(get('state')),
+      county: intern(get('county')),
+      location,
+      locationId: intern(get('locationId')) || location,
+      lat: num(get('lat')),
+      lng: num(get('lng')),
+      date: intern(date),
+      startMin: toTime(get('time')),
+      protocol: toProtocol(get('protocol')),
+      durationMin: num(get('duration')),
+      allObs: get('allObs') === '1',
       distanceMi,
-      observers: num(get(r, 'observers')),
+      observers: num(get('observers')),
     });
-  }
+  });
+  if (!idx) throw new Error('That file has no observations in it.');
   if (!rows.length) throw new Error('No observations could be read from that file.');
   return rows;
 }

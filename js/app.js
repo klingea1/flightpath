@@ -264,14 +264,27 @@ async function shareCard() {
 }
 
 // Accepts the zip eBird emails or the CSV inside it.
+// Big exports take a few seconds on a phone, so the drop zone says so.
+function setBusy(busy) {
+  $('drop').classList.toggle('busy', busy);
+  $('drop').querySelector('strong').textContent = busy ? 'Reading your checklists\u2026' : 'Drop your eBird zip here';
+  $('drop').querySelector('span').textContent = busy ? 'Big exports can take a few seconds.' : 'or tap to choose it. The CSV inside works too.';
+}
+
 async function readFile(file) {
   if (!file) return;
+  showError('');
+  setBusy(true);
+  // Let the busy message paint before the heavy work starts.
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const text = isZip(bytes) ? await csvFromZip(bytes) : new TextDecoder('utf-8').decode(bytes);
     load(text);
   } catch (e) {
     showError(e.message || "That file couldn't be read.");
+  } finally {
+    setBusy(false);
   }
 }
 

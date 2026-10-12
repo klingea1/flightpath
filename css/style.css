@@ -81,6 +81,7 @@ code {
 }
 .drop:hover, .drop:focus-visible, .drop.over { border-color: var(--accent); background: #2a2450; outline: none; }
 .drop strong { font-size: 1.15rem; }
+.drop.busy { border-color: var(--accent); border-style: solid; cursor: progress; }
 .drop span { color: var(--ink-soft); }
 
 .link-button {

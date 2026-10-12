@@ -72,6 +72,10 @@ npm test           # node --test
 
 `npm install` is only needed to rebuild the map outlines (see `tools/build-map.mjs`). The site itself has no dependencies to install.
 
+`node tools/make-big-export.mjs <out.csv>` writes a large synthetic export
+(20 years, about 65 MB) for performance testing. It loads in about 3 seconds
+on a laptop, using about 190 MB of memory.
+
 `samples/demo.csv` is a simulated export (with a few added checklists to exercise the seen-once and grind cards) used by the "Try the demo data" button and the tests.
 
 ## Layout

@@ -22,7 +22,17 @@ export function displayLocation(name, county) {
 // Subspecies groups like "Yellow-rumped Warbler (Myrtle)" count as the parent.
 // A bundled eBird taxonomy file would make this exact; this covers the
 // common cases without one.
+const speciesKeys = new Map();
 export function speciesKey(commonName) {
+  let key = speciesKeys.get(commonName);
+  if (key === undefined) {
+    key = toSpeciesKey(commonName);
+    speciesKeys.set(commonName, key);
+  }
+  return key;
+}
+
+function toSpeciesKey(commonName) {
   const name = commonName.trim();
   if (/\bsp\.$/.test(name) || / sp\. /.test(name)) return null;
   if (name.includes('/')) return null;
