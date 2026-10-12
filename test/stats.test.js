@@ -175,3 +175,11 @@ test('location names lose coordinates and get readable separators', async () => 
   assert.equal(displayLocation('Free Soil Road towards Campground (44.142, -86.4)'), 'Free Soil Road towards Campground');
   assert.equal(displayLocation('Trail mile 1.5'), 'Trail mile 1.5');
 });
+
+test('persona: a three-week streak is not enough for Daily Devotee', () => {
+  const lines = [];
+  for (let i = 1; i <= 21; i++) {
+    lines.push(`S${i},Blue Jay,a,1,1,US-MI,Kent,L${i % 3},Spot ${i % 3},42.9,-85.6,2026-03-${String(i).padStart(2, '0')},12:00,Traveling,30,1,1`);
+  }
+  assert.notEqual(pickPersona(computeYear(parseEbirdExport(csv(lines)), 2026)).id, 'streak');
+});

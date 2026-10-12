@@ -65,7 +65,9 @@ export const PERSONAS = [
   {
     id: 'streak',
     name: 'Daily Devotee',
-    score: (s) => s.longestStreak / 7,
+    // A month-long streak to qualify, so a good week or two doesn't
+    // outrank someone's real defining habit.
+    score: (s) => s.longestStreak / 30,
     blurb: () => "Rain, wind, or Monday, you didn't skip a day.",
     evidence: (s) => `A ${s.longestStreak}-day checklist streak`,
   },
