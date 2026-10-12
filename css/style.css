@@ -40,7 +40,10 @@ button { font: inherit; cursor: pointer; }
   font-size: clamp(2.4rem, 9vw, 3.6rem);
   line-height: 1.02;
   margin: 8px 0 16px;
+  text-wrap: balance;
 }
+.upload-inner h1 .hero-year { color: var(--accent); }
+.nowrap { white-space: nowrap; }
 
 .eyebrow {
   text-transform: uppercase;
