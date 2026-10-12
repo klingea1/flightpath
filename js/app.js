@@ -1,4 +1,5 @@
 import { parseEbirdExport } from './parse.js';
+import { reportYear, defaultYear } from './years.js';
 import { isZip, csvFromZip } from './unzip.js';
 import { availableYears, computeYear } from './stats.js';
 import { pickPersona, PERSONAS } from './persona.js';
@@ -9,8 +10,7 @@ import { mountMap } from './mapcard.js';
 const $ = (id) => document.getElementById(id);
 const state = { rows: null, year: null, index: 0, cards: [] };
 
-const thisYear = new Date().getFullYear();
-$('year-label').textContent = thisYear;
+$('year-label').textContent = reportYear();
 
 function showError(msg) {
   $('error').textContent = msg;
@@ -28,7 +28,7 @@ function load(text) {
   const years = availableYears(state.rows);
   $('year').innerHTML = years.map((y) => `<option>${y}</option>`).join('');
   $('year-picker').hidden = years.length < 2;
-  state.year = years.includes(thisYear) ? thisYear : years[0];
+  state.year = defaultYear(years);
   $('year').value = state.year;
   // Show the deck first so fit() can measure the stage.
   $('upload').hidden = true;
