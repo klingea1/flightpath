@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flight Path</title>
+  <meta name="description" content="Your year of birding, from your own eBird data. Everything stays in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" crossorigin="anonymous"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="upload" class="screen">
+    <div class="upload-inner">
+      <p class="eyebrow">For the Kent County birders</p>
+      <h1>Your <span id="year-label">year</span> Flight Path</h1>
+      <p class="lede">Your year of birding as a few shareable cards, built from your own eBird data.</p>
+
+      <ol class="steps">
+        <li>Request your data at <a href="https://ebird.org/downloadMyData" target="_blank" rel="noopener">ebird.org/downloadMyData</a>. eBird emails you a zip file within a few minutes.</li>
+        <li>Unzip it and drop <code>MyEBirdData.csv</code> below.</li>
+      </ol>
+
+      <label id="drop" class="drop" tabindex="0">
+        <input id="file" type="file" accept=".csv,text/csv" hidden>
+        <strong>Drop your CSV here</strong>
+        <span>or tap to choose a file</span>
+      </label>
+      <button id="demo" class="link-button" type="button">No file handy? Try the demo data</button>
+
+      <p id="error" class="error" role="alert" hidden></p>
+      <p class="privacy">Your file never leaves your device. All the math happens in this browser tab.</p>
+    </div>
+  </main>
+
+  <main id="deck" class="screen" hidden>
+    <div class="deck-bar">
+      <button id="back" class="link-button" type="button">&larr; Start over</button>
+      <label id="year-picker" hidden>Year <select id="year"></select></label>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="stage" id="stage"></div>
+    <div class="deck-controls">
+      <button id="prev" type="button" aria-label="Previous card">&larr;</button>
+      <button id="save" type="button">Save this card</button>
+      <button id="next" type="button" aria-label="Next card">&rarr;</button>
+    </div>
+  </main>
+
+  <script src="vendor/html-to-image-1.11.11.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
