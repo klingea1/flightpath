@@ -2,7 +2,7 @@ import { parseEbirdExport } from './parse.js';
 import { isZip, csvFromZip } from './unzip.js';
 import { availableYears, computeYear } from './stats.js';
 import { pickPersona, PERSONAS } from './persona.js';
-import { buildCards, CARD_W, CARD_H } from './slides.js';
+import { buildCards, formatDuration, CARD_W, CARD_H } from './slides.js';
 import { buildPlaces } from './places.js';
 import { mountMap } from './mapcard.js';
 
@@ -59,10 +59,64 @@ function render() {
   fit();
 }
 
-function show() {
+const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+// Counts marked numbers up from zero. Each run gets a token, so a newer run
+// or a save (which clears the token) stops the old one.
+function countUp(card) {
+  const token = {};
+  card.countToken = token;
+  const targets = [
+    ...[...card.querySelectorAll('[data-count]')].map((el) => {
+      el.dataset.final ??= el.textContent;
+      const n = Number(el.dataset.final.replace(/,/g, ''));
+      return { el, ms: 1000, text: (t) => Math.round(n * t).toLocaleString('en-US') };
+    }),
+    ...[...card.querySelectorAll('[data-count-minutes]')].map((el) => {
+      el.dataset.final ??= el.textContent;
+      const n = Number(el.dataset.countMinutes);
+      return { el, ms: 1500, text: (t) => formatDuration(Math.round(n * t)) };
+    }),
+  ];
+  if (!targets.length) return;
+  const start = performance.now();
+  const tick = (now) => {
+    if (card.countToken !== token) return;
+    let running = false;
+    for (const x of targets) {
+      const t = Math.min(1, (now - start) / x.ms);
+      x.el.textContent = t < 1 ? x.text(easeOut(t)) : x.el.dataset.final;
+      running ||= t < 1;
+    }
+    if (running) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// Plays a card's entrance from the top.
+function enter(frame, direction) {
+  const card = frame.querySelector('.card');
+  frame.classList.remove('enter-next', 'enter-prev');
+  card.classList.remove('play', 'still');
+  void card.offsetWidth; // restart CSS animations
+  if (direction) frame.classList.add(direction);
+  card.classList.add('play');
+  if (!reduceMotion) countUp(card);
+}
+
+// Jumps a card to its finished state, for saving.
+function settle(card) {
+  card.classList.add('still');
+  card.countToken = null;
+  for (const el of card.querySelectorAll('[data-final]')) el.textContent = el.dataset.final;
+}
+
+function show(direction = null) {
   // Leaving the map mid-flight lands it; Leaflet can't draw while hidden.
   state.cards.forEach((c, i) => { if (i !== state.index && c.mapCtl?.running) c.mapCtl.skip(); });
   state.cards.forEach((c, i) => c.classList.toggle('active', i === state.index));
+  enter(state.cards[state.index], direction);
   state.cards[state.index].mapCtl?.refresh();
   [...$('progress').children].forEach((b, i) => b.classList.toggle('done', i <= state.index));
   $('prev').disabled = state.index === 0;
@@ -101,8 +155,10 @@ function updateReplay() {
 }
 
 function go(delta) {
-  state.index = Math.max(0, Math.min(state.cards.length - 1, state.index + delta));
-  show();
+  const next = Math.max(0, Math.min(state.cards.length - 1, state.index + delta));
+  if (next === state.index) return;
+  state.index = next;
+  show(delta > 0 ? 'enter-next' : 'enter-prev');
 }
 
 // Scales the fixed-size cards to fit the stage.
@@ -120,6 +176,7 @@ async function saveCard() {
   try {
     const ctl = await state.cards[state.index].mapReady;
     if (ctl?.running) await ctl.skip();
+    settle(card);
     const url = await window.htmlToImage.toPng(card, { width: CARD_W, height: CARD_H, pixelRatio: 1 });
     const a = document.createElement('a');
     a.href = url;

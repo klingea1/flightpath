@@ -47,6 +47,10 @@ there is no server, account, or database.
    reduced motion turned on, the card shows the final frame directly.
 12. **Summary**: the whole year on one card, the one most worth posting.
 
+Each card animates once as it's shown (counts tick up, lists cascade, bars
+grow) and then holds still. Saving freezes the finished card first, so the
+image is never caught mid-animation. Reduced motion turns entrances off.
+
 ## Development
 
 No build step. Serve the folder and open it:

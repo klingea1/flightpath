@@ -31,6 +31,13 @@ const titleSize = (name) => (name.length > 34 ? ' title-long' : name.length > 22
 
 const plural = (n, one, many = one + 's') => `${fmt(n)} ${n === 1 ? one : many}`;
 
+// Entrance animation hooks. Each marked element plays its effect once when
+// its card is shown, after a delay in ms. See the "Entrances" section of the CSS.
+const fx = (kind, delay = 0) => ` data-fx="${kind}" style="--d:${Math.round(delay)}ms"`;
+
+// Numbers that count up from zero as the card appears.
+const count = ' data-count';
+
 function footer(year) {
   return `<footer class="card-foot"><span>Flight Path</span><span>${year}</span></footer>`;
 }
@@ -65,13 +72,14 @@ function flightPathSvg(lists, w, h) {
     const bend = (i % 2 ? 0.25 : -0.25) * (1 + (i % 5) / 5);
     const cx = (x1 + x2) / 2 - dy * bend;
     const cy = (y1 + y2) / 2 + dx * bend;
-    paths += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+    const delay = 120 + (900 * i) / proj.length;
+    paths += `<path pathLength="1"${fx('draw', delay)} d="M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
   }
 
   const unique = [...new Set(proj.map((p) => p.map((v) => v.toFixed(0)).join(',')))];
   const dots = unique.map((k) => {
     const [x, y] = k.split(',');
-    return `<circle cx="${x}" cy="${y}" r="9"/>`;
+    return `<circle${fx('dot', 900)} cx="${x}" cy="${y}" r="9"/>`;
   }).join('');
 
   return `<svg class="path-art" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
@@ -83,7 +91,7 @@ function coverCard(s) {
   return `
   <section class="card card-cover">
     ${flightPathSvg(s.lists, CARD_W, 820)}
-    <div class="cover-text">
+    <div class="cover-text"${fx('rise', 500)}>
       <p class="eyebrow">Your</p>
       <h2><span class="year">${s.year}</span><br>Flight Path</h2>
       <p class="cover-sub">${fmt(s.checklists)} checklists &middot; ${esc(counties)}</p>
@@ -107,10 +115,10 @@ function headlineCard(s) {
   return `
   <section class="card card-headline">
     <p class="eyebrow">In ${s.year} you found</p>
-    <div class="big-number">${fmt(s.species)}</div>
-    <p class="big-label">species</p>
+    <div class="big-number"${count}>${fmt(s.species)}</div>
+    <p class="big-label"${fx('rise', 150)}>species</p>
     <div class="tiles">
-      ${tiles.map(([n, l]) => `<div class="tile"><div class="tile-n">${n}</div><div class="tile-l">${esc(l)}</div></div>`).join('')}
+      ${tiles.map(([n, l], i) => `<div class="tile"${fx('pop', 300 + i * 90)}><div class="tile-n">${n}</div><div class="tile-l">${esc(l)}</div></div>`).join('')}
     </div>
     ${footer(s.year)}
   </section>`;
@@ -120,9 +128,9 @@ function personaCard(s, persona) {
   return `
   <section class="card card-persona persona-${persona.id}">
     <p class="eyebrow">Your birding persona</p>
-    <h2 class="persona-name">${esc(persona.name)}</h2>
-    <p class="persona-blurb">${esc(persona.blurb)}</p>
-    ${persona.evidence.length ? `<ul class="evidence">${persona.evidence.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}
+    <h2 class="persona-name"${fx('focus', 100)}>${esc(persona.name)}</h2>
+    <p class="persona-blurb"${fx('rise', 550)}>${esc(persona.blurb)}</p>
+    ${persona.evidence.length ? `<ul class="evidence">${persona.evidence.map((e, i) => `<li${fx('slide', 800 + i * 140)}>${esc(e)}</li>`).join('')}</ul>` : ''}
     ${footer(s.year)}
   </section>`;
 }
@@ -138,10 +146,10 @@ function firstListCard(s) {
     <h2 class="card-title${titleSize(f.location)}">${esc(f.location)}</h2>
     <p class="card-sub">${esc(when)} &middot; ${plural(f.species.length, 'species', 'species')}</p>
     <ul class="name-list">
-      ${shown.map((n) => `<li>${esc(n)}</li>`).join('')}
-      ${more > 0 ? `<li class="more">and ${more} more</li>` : ''}
+      ${shown.map((n, i) => `<li${fx('rise', 250 + i * 110)}>${esc(n)}</li>`).join('')}
+      ${more > 0 ? `<li class="more"${fx('rise', 250 + shown.length * 110)}>and ${more} more</li>` : ''}
     </ul>
-    ${f.dayChecklists > 1 ? `<p class="first-day">By the end of ${formatDate(f.date)}: ${plural(f.dayChecklists, 'checklist')}, ${plural(f.daySpecies, 'species', 'species')}.</p>` : ''}
+    ${f.dayChecklists > 1 ? `<p class="first-day"${fx('rise', 450 + shown.length * 110)}>By the end of ${formatDate(f.date)}: ${plural(f.dayChecklists, 'checklist')}, ${plural(f.daySpecies, 'species', 'species')}.</p>` : ''}
     ${footer(s.year)}
   </section>`;
 }
@@ -154,11 +162,11 @@ function lifersCard(s) {
   return `
   <section class="card card-lifers">
     <p class="eyebrow">${firstYear ? 'Your life list begins' : `New to your life list in ${s.year}`}</p>
-    <div class="big-number">${fmt(list.length)}</div>
-    <p class="big-label">${firstYear ? 'species and counting' : list.length === 1 ? 'lifer' : 'lifers'}</p>
+    <div class="big-number"${count}>${fmt(list.length)}</div>
+    <p class="big-label"${fx('rise', 150)}>${firstYear ? 'species and counting' : list.length === 1 ? 'lifer' : 'lifers'}</p>
     <ul class="dated-list">
-      ${shown.map((l) => `<li><span>${esc(l.name)}</span><span>${formatDate(l.date)}</span></li>`).join('')}
-      ${more > 0 ? `<li class="more"><span>and ${more} more</span></li>` : ''}
+      ${shown.map((l, i) => `<li${fx('slide', 300 + i * 90)}><span>${esc(l.name)}</span><span>${formatDate(l.date)}</span></li>`).join('')}
+      ${more > 0 ? `<li class="more"${fx('slide', 300 + shown.length * 90)}><span>and ${more} more</span></li>` : ''}
     </ul>
     ${footer(s.year)}
   </section>`;
@@ -172,14 +180,14 @@ function patchCard(s) {
     <p class="eyebrow">Your top patch</p>
     <h2 class="card-title${titleSize(t.name)}">${esc(t.name)}</h2>
     <div class="patch-stats">
-      <div><div class="tile-n">${fmt(t.checklists)}</div><div class="tile-l">${t.checklists === 1 ? 'visit' : 'visits'}</div></div>
-      <div><div class="tile-n">${fmt(t.species)}</div><div class="tile-l">species</div></div>
-      <div><div class="tile-n">${Math.round(t.share * 100)}%</div><div class="tile-l">of your checklists</div></div>
+      <div${fx('pop', 250)}><div class="tile-n">${fmt(t.checklists)}</div><div class="tile-l">${t.checklists === 1 ? 'visit' : 'visits'}</div></div>
+      <div${fx('pop', 380)}><div class="tile-n">${fmt(t.species)}</div><div class="tile-l">species</div></div>
+      <div${fx('pop', 510)}><div class="tile-n">${Math.round(t.share * 100)}%</div><div class="tile-l">of your checklists</div></div>
     </div>
     ${t.only.length
-      ? `<p class="patch-only-label">Only found here this year</p>
-         <ul class="name-list">${only.map((n) => `<li>${esc(n)}</li>`).join('')}${t.only.length > only.length ? `<li class="more">and ${t.only.length - only.length} more</li>` : ''}</ul>`
-      : `<p class="patch-note">Everything you found here, you found somewhere else too. A true home base.</p>`}
+      ? `<p class="patch-only-label"${fx('rise', 750)}>Only found here this year</p>
+         <ul class="name-list">${only.map((n, i) => `<li${fx('rise', 850 + i * 100)}>${esc(n)}</li>`).join('')}${t.only.length > only.length ? `<li class="more">and ${t.only.length - only.length} more</li>` : ''}</ul>`
+      : `<p class="patch-note"${fx('rise', 800)}>Everything you found here, you found somewhere else too. A true home base.</p>`}
     ${footer(s.year)}
   </section>`;
 }
@@ -198,20 +206,20 @@ function topBirdsCard(s) {
   return `
   <section class="card card-birds">
     <p class="eyebrow">Your top birds</p>
-    <div class="top-one">
+    <div class="top-one"${fx('rise', 200 + rest.length * 170)}>
       <span class="rank">No. 1</span>
       <h2 class="card-title">${esc(top.name)}</h2>
       <p class="card-sub">On ${Math.round(top.share * 100)}% of your checklists, ${plural(top.checklists, 'list')} in all</p>
-      ${KENT_STAPLES.has(top.name) ? '<p class="quip">Same as basically everyone in Kent County.</p>' : ''}
+      ${KENT_STAPLES.has(top.name) ? `<p class="quip"${fx('rise', 700 + rest.length * 170)}>Same as basically everyone in Kent County.</p>` : ''}
     </div>
     <ol class="rank-list" start="2">
-      ${rest.map((b, i) => `<li><span class="rank">${i + 2}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
+      ${rest.map((b, i) => `<li${fx('slide', 200 + (rest.length - 1 - i) * 170)}><span class="rank">${i + 2}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
     </ol>
     ${footer(s.year)}
   </section>`;
 }
 
-function formatDuration(min) {
+export function formatDuration(min) {
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
   return h ? `${h} hr${m ? ` ${m} min` : ''}` : `${m} min`;
@@ -224,11 +232,11 @@ function seenOnceCard(s) {
   return `
   <section class="card card-once">
     <p class="eyebrow">Seen exactly once</p>
-    <div class="big-number">${fmt(list.length)}</div>
-    <p class="big-label">${list.length === 1 ? 'bird showed up on just one checklist' : 'birds showed up on just one checklist'}</p>
+    <div class="big-number"${count}>${fmt(list.length)}</div>
+    <p class="big-label"${fx('rise', 150)}>${list.length === 1 ? 'bird showed up on just one checklist' : 'birds showed up on just one checklist'}</p>
     <ul class="once-list">
-      ${shown.map((b) => `<li><span class="once-name">${esc(b.name)}</span><span class="once-where">${formatDate(b.date)} &middot; ${esc(b.location)}</span></li>`).join('')}
-      ${more > 0 ? `<li class="more">and ${more} more</li>` : ''}
+      ${shown.map((b, i) => `<li${fx('slide', 300 + i * 100)}><span class="once-name">${esc(b.name)}</span><span class="once-where">${formatDate(b.date)} &middot; ${esc(b.location)}</span></li>`).join('')}
+      ${more > 0 ? `<li class="more"${fx('slide', 300 + shown.length * 100)}>and ${more} more</li>` : ''}
     </ul>
     ${footer(s.year)}
   </section>`;
@@ -239,10 +247,10 @@ function grindCard(s) {
   return `
   <section class="card card-grind">
     <p class="eyebrow">Your grind</p>
-    <div class="grind-time">${formatDuration(g.durationMin)}</div>
+    <div class="grind-time" data-count-minutes="${g.durationMin}">${formatDuration(g.durationMin)}</div>
     <p class="grind-sub">at ${esc(g.location)} on ${formatDate(g.date)}, for ${plural(g.species.length, 'species', 'species')}</p>
     <p class="grind-list">${g.species.map(esc).join(', ')}</p>
-    <p class="grind-close">Not every outing is a big day. You stayed out anyway.</p>
+    <p class="grind-close"${fx('fade', 1600)}>Not every outing is a big day. You stayed out anyway.</p>
     ${footer(s.year)}
   </section>`;
 }
@@ -264,8 +272,9 @@ function monthsCard(s) {
     const r = Math.min(8, bh);
     // Rounded top, square base.
     const d = `M${x} ${base} V${(y + r).toFixed(1)} Q${x} ${y.toFixed(1)} ${x + r} ${y.toFixed(1)} H${x + barW - r} Q${x + barW} ${y.toFixed(1)} ${x + barW} ${(y + r).toFixed(1)} V${base} Z`;
-    const value = i === peak ? `<text class="m-value" x="${(x + barW / 2).toFixed(1)}" y="${(y - 16).toFixed(1)}">${n}</text>` : '';
-    return `<path class="${i === peak ? 'm-bar peak' : 'm-bar'}" d="${d}"/>${value}${label}`;
+    const value = i === peak ? `<text class="m-value"${fx('fade', 1150)} x="${(x + barW / 2).toFixed(1)}" y="${(y - 16).toFixed(1)}">${n}</text>` : '';
+    const grow = fx(i === peak ? 'grow-peak' : 'grow', 150 + i * 70);
+    return `<path class="${i === peak ? 'm-bar peak' : 'm-bar'}"${grow} d="${d}"/>${value}${label}`;
   }).join('');
 
   return `
@@ -292,11 +301,11 @@ function summaryCard(s, persona) {
       </div>
       ${flightPathSvg(s.lists, 380, 300).replace('class="path-art"', 'class="path-art mini"')}
     </div>
-    <div class="sum-hero">
+    <div class="sum-hero"${fx('rise', 150)}>
       <div class="sum-big">${fmt(s.species)}</div>
       <div class="sum-big-label">species</div>
     </div>
-    <div class="sum-cols">
+    <div class="sum-cols"${fx('rise', 400)}>
       <div>
         <p class="sum-label">Top birds</p>
         <ol class="sum-list">${s.topSpeciesList.map((b) => `<li>${esc(b.name)}</li>`).join('')}</ol>
@@ -307,7 +316,7 @@ function summaryCard(s, persona) {
         ${s.topLocation ? `<p class="sum-label">Top patch</p><p class="sum-value">${esc(s.topLocation.name)}</p>` : ''}
       </div>
     </div>
-    <div class="sum-stats">
+    <div class="sum-stats"${fx('rise', 650)}>
       <div><b>${fmt(s.checklists)}</b> checklists</div>
       <div><b>${fmt(s.hours)}</b> hours</div>
       <div><b>${fmt(s.miles)}</b> miles</div>
