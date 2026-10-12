@@ -1,5 +1,22 @@
 // Turns normalized observation rows into the numbers behind each slide.
 
+// eBird names many personal locations after their coordinates, e.g.
+// "Michigan 66 (42.766, -85.074)". Cards are shared publicly, so coordinates
+// are stripped from every name, and eBird's "--" separator becomes an en dash.
+// In parentheses, any precision counts ("(20.9, -156.441)"); bare pairs need
+// two decimals so names like "Route 1.5" survive.
+const COORDS = /\s*\(\s*-?\d{1,3}(?:\.\d+)?\s*,\s*-?\d{1,3}(?:\.\d+)?\s*\)|\s*-?\d{1,3}\.\d{2,}\s*,\s*-?\d{1,3}\.\d{2,}/g;
+
+export function displayLocation(name, county) {
+  const clean = String(name || '')
+    .replace(COORDS, '')
+    .replace(/\s*--\s*/g, ' \u2013 ')
+    .replace(/[\s,\u2013-]+$/, '')
+    .trim();
+  if (clean) return clean;
+  return county ? `Somewhere in ${county} County` : 'An unnamed spot';
+}
+
 // Collapses an eBird common name to a countable species, or null when the
 // entry isn't a full species (spuhs, slashes, hybrids, domestics).
 // Subspecies groups like "Yellow-rumped Warbler (Myrtle)" count as the parent.
@@ -31,7 +48,7 @@ export function groupChecklists(rows) {
         protocol: r.protocol,
         durationMin: r.durationMin,
         distanceMi: r.distanceMi,
-        location: r.location,
+        location: displayLocation(r.location, r.county),
         locationId: r.locationId,
         county: r.county,
         state: r.state,
@@ -129,6 +146,8 @@ export function computeYear(rows, year) {
     (a, b) => a.date.localeCompare(b.date) || (a.startMin ?? 0) - (b.startMin ?? 0)
   );
   const first = chronological[0];
+  const firstDayLists = first ? lists.filter((c) => c.date === first.date) : [];
+  const firstDaySpecies = new Set(firstDayLists.flatMap((c) => [...c.species]));
 
   const topSpeciesList = [...speciesLists]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -183,6 +202,8 @@ export function computeYear(rows, year) {
       startMin: first.startMin,
       location: first.location,
       species: [...first.species].sort(byTaxon),
+      dayChecklists: firstDayLists.length,
+      daySpecies: firstDaySpecies.size,
     },
     topSpeciesList,
     monthly,

@@ -18,7 +18,7 @@ const COLORS = {
 // Closest zoom: about 60 km across the card. Keeps pins from reading as addresses.
 const MAX_ZOOM = 11;
 
-import { buildLegs } from './places.js';
+import { buildMonths } from './places.js';
 
 const loaded = new Map();
 function loadOnce(key, fn) {
@@ -158,18 +158,22 @@ function fit(map, bounds, padTL, padBR, minKm) {
 const PAD_TL = [110, 360];
 const padBR = (places) => [110, places.needsInset ? 520 : 200];
 
-// Pacing. Home visits share a fixed budget so a 400-checklist year and a
-// 40-checklist year both play in about the same time.
-const HOME_BUDGET_MS = 8000;
-// Flights share a budget too, so a year with many trips flies faster
-// instead of running long.
-const FLIGHT_BUDGET_S = 7;
-const FLIGHT_MIN_S = 0.7;
-const STEP_MIN_MS = 35;
-const STEP_MAX_MS = 350;
-const TRIP_STEP_MS = 280;
-const TRIP_HOLD_MS = 500;
-const END_HOLD_MS = 400;
+// Pacing: one beat per month, so every year plays in about 12 seconds
+// however much someone traveled.
+const MONTH_MS = 1000;
+const MONTH_FLY_S = 0.45;
+const FINAL_FLY_S = 0.9;
+const BLOOM_MS = 380;
+const BLOOM_STAGGER_MS = 160;
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+
+function monthLabel(m) {
+  const away = m.regions.slice(0, 2);
+  if (m.regions.length > 2) away.push(`${m.regions.length - 2} more`);
+  return away.length ? `${MONTH_NAMES[m.month]} \u00b7 ${away.join(', ')}` : MONTH_NAMES[m.month];
+}
 
 const easeOutBack = (t) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
 
@@ -183,13 +187,7 @@ function animateRadius(marker, from, to, ms, ease = easeOutBack) {
   requestAnimationFrame(tick);
 }
 
-function formatDay(iso) {
-  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
-}
-
 const SKIPPED = Symbol('skipped');
-
-const flightSeconds = (km) => 1.0 + Math.min(1.2, km / 1800);
 
 // Draws the map and returns a controller that plays the year's flight and
 // always lands on the same final frame.
@@ -221,22 +219,7 @@ export async function mountMap(card, places, stats) {
 
   const countEl = card.querySelector('.map-count');
   const subEl = card.querySelector('.map-sub');
-  const legs = buildLegs(places);
-  const homeVisits = legs.filter((l) => l.home).reduce((n, l) => n + l.visits.length, 0);
-  const homeStep = Math.max(STEP_MIN_MS, Math.min(STEP_MAX_MS, HOME_BUDGET_MS / Math.max(1, homeVisits)));
-
-  // Estimate every flight up front to scale them into the budget.
-  const centerOf = (b) => L.latLngBounds(b).getCenter();
-  const homeCenter = centerOf(places.homeBounds);
-  let flightTotal = 0;
-  let at = legs[0].home ? homeCenter : centerOf(legs[0].bounds);
-  for (const leg of legs.slice(1)) {
-    const next = leg.home ? homeCenter : centerOf(leg.bounds);
-    if (!next.equals(at)) flightTotal += flightSeconds(at.distanceTo(next) / 1000);
-    at = next;
-  }
-  flightTotal += flightSeconds(at.distanceTo(centerOf(places.allBounds)) / 1000);
-  const flightScale = Math.min(1, FLIGHT_BUDGET_S / flightTotal);
+  const months = buildMonths(places);
 
   let markers = new Map();
   let run = null;
@@ -261,14 +244,10 @@ export async function mountMap(card, places, stats) {
   }
 
   // Leaflet's flyToBounds, awaited, and cancelled by a skip.
-  function fly(bounds, minKm, token) {
+  function fly(bounds, minKm, duration, token) {
     return new Promise((resolve, reject) => {
       if (token.skipped) return reject(SKIPPED);
       const target = atLeast(bounds, minKm);
-      const from = map.getCenter();
-      const to = L.latLngBounds(target).getCenter();
-      const km = from.distanceTo(to) / 1000;
-      const duration = Math.max(FLIGHT_MIN_S, flightSeconds(km) * flightScale);
       map.once('moveend', () => (token.skipped ? reject(SKIPPED) : resolve()));
       map.flyToBounds(target, { paddingTopLeft: PAD_TL, paddingBottomRight: padBR(places), maxZoom: MAX_ZOOM, duration });
       token.onSkip = () => reject(SKIPPED);
@@ -284,58 +263,57 @@ export async function mountMap(card, places, stats) {
   }
 
   const visitCounts = new Map();
-  function visit(v, step) {
-    const pin = places.pins[v.pin];
-    const n = (visitCounts.get(v.pin) || 0) + 1;
-    visitCounts.set(v.pin, n);
-    const r = pinRadius(n);
-    let m = markers.get(v.pin);
-    if (!m) {
-      m = L.circleMarker([pin.lat, pin.lng], {
-        renderer, radius: 0, color: COLORS.pinStroke, weight: 2.5,
-        fillColor: COLORS.pin, fillOpacity: 0.9, interactive: false,
-      }).addTo(map);
-      markers.set(v.pin, m);
-      countEl.textContent = placesText(markers.size);
-      animateRadius(m, 0, r, Math.min(420, Math.max(220, step * 3)));
-    } else {
-      animateRadius(m, m.getRadius(), r, 220);
+  // All of a month's visits bloom together: new places pop in, places
+  // visited again grow.
+  function bloom(visits) {
+    const added = new Map();
+    for (const v of visits) added.set(v.pin, (added.get(v.pin) || 0) + 1);
+    for (const [i, n] of added) {
+      const total = (visitCounts.get(i) || 0) + n;
+      visitCounts.set(i, total);
+      const pin = places.pins[i];
+      const delay = Math.random() * BLOOM_STAGGER_MS;
+      let m = markers.get(i);
+      if (!m) {
+        m = L.circleMarker([pin.lat, pin.lng], {
+          renderer, radius: 0, color: COLORS.pinStroke, weight: 2.5,
+          fillColor: COLORS.pin, fillOpacity: 0.9, interactive: false,
+        }).addTo(map);
+        markers.set(i, m);
+      }
+      const from = m.getRadius();
+      setTimeout(() => animateRadius(m, from, pinRadius(total), BLOOM_MS), delay);
     }
+    countEl.textContent = placesText(markers.size);
   }
 
-  async function playLegs(token) {
+  // Flies only when the month's places aren't already well framed.
+  function needsMove(target) {
+    const b = L.latLngBounds(target);
+    const zoomFor = map.getBoundsZoom(b, false, L.point(220, 560));
+    return !map.getBounds().contains(b) || zoomFor - map.getZoom() > 0.8;
+  }
+
+  async function playMonths(token) {
     clearPins();
     visitCounts.clear();
     if (insetBox) insetBox.classList.remove('shown');
-    const homeView = atLeast(places.homeBounds, 70);
-    const first = legs[0];
-    fit(map, first.home ? homeView : first.bounds, PAD_TL, padBR(places), first.home ? 70 : 60);
+    const first = months.find((m) => m.visits.length);
+    fit(map, first.bounds, PAD_TL, padBR(places), 70);
     renderer._reset();
-    let atHome = first.home;
-    let here = first;
 
-    for (const leg of legs) {
-      if (leg.home && !atHome) {
-        subEl.textContent = 'Back home';
-        await fly(homeView, 70, token);
-      } else if (!leg.home && leg !== here) {
-        subEl.textContent = leg.label;
-        await fly(leg.bounds, 60, token);
-        await wait(TRIP_HOLD_MS, token);
+    for (const m of months) {
+      const start = performance.now();
+      subEl.textContent = monthLabel(m);
+      if (m.visits.length) {
+        const target = atLeast(m.bounds, 70);
+        if (needsMove(target)) await fly(target, 70, MONTH_FLY_S, token);
+        bloom(m.visits);
       }
-      if (!leg.home) subEl.textContent = leg.label;
-      atHome = leg.home;
-      here = leg;
-      const step = leg.home ? homeStep : Math.min(TRIP_STEP_MS, 1500 / leg.visits.length);
-      for (const v of leg.visits) {
-        if (leg.home) subEl.textContent = formatDay(v.date);
-        visit(v, step);
-        await wait(step, token);
-      }
+      await wait(Math.max(0, MONTH_MS - (performance.now() - start)), token);
     }
-    await wait(END_HOLD_MS, token);
     subEl.textContent = '';
-    await fly(places.allBounds, 160, token);
+    await fly(places.allBounds, 160, FINAL_FLY_S, token);
   }
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -348,7 +326,7 @@ export async function mountMap(card, places, stats) {
       if (reduceMotion) { showFinal(); return controller.done; }
       const token = { skipped: false, onSkip: null };
       run = token;
-      controller.done = playLegs(token)
+      controller.done = playMonths(token)
         .catch((e) => { if (e !== SKIPPED) console.error(e); })
         .finally(() => { run = null; showFinal(token.skipped); });
       return controller.done;

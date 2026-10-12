@@ -26,6 +26,9 @@ function formatTime(min) {
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
   'August', 'September', 'October', 'November', 'December'];
 
+// Long location names step down in size so they fit in two or three lines.
+const titleSize = (name) => (name.length > 34 ? ' title-long' : name.length > 22 ? ' title-mid' : '');
+
 const plural = (n, one, many = one + 's') => `${fmt(n)} ${n === 1 ? one : many}`;
 
 function footer(year) {
@@ -132,12 +135,13 @@ function firstListCard(s) {
   return `
   <section class="card card-first">
     <p class="eyebrow">Your ${s.year} started</p>
-    <h2 class="card-title">${esc(f.location)}</h2>
+    <h2 class="card-title${titleSize(f.location)}">${esc(f.location)}</h2>
     <p class="card-sub">${esc(when)} &middot; ${plural(f.species.length, 'species', 'species')}</p>
     <ul class="name-list">
       ${shown.map((n) => `<li>${esc(n)}</li>`).join('')}
       ${more > 0 ? `<li class="more">and ${more} more</li>` : ''}
     </ul>
+    ${f.dayChecklists > 1 ? `<p class="first-day">By the end of ${formatDate(f.date)}: ${plural(f.dayChecklists, 'checklist')}, ${plural(f.daySpecies, 'species', 'species')}.</p>` : ''}
     ${footer(s.year)}
   </section>`;
 }
@@ -166,7 +170,7 @@ function patchCard(s) {
   return `
   <section class="card card-patch">
     <p class="eyebrow">Your top patch</p>
-    <h2 class="card-title">${esc(t.name)}</h2>
+    <h2 class="card-title${titleSize(t.name)}">${esc(t.name)}</h2>
     <div class="patch-stats">
       <div><div class="tile-n">${fmt(t.checklists)}</div><div class="tile-l">${t.checklists === 1 ? 'visit' : 'visits'}</div></div>
       <div><div class="tile-n">${fmt(t.species)}</div><div class="tile-l">species</div></div>
@@ -215,7 +219,7 @@ function formatDuration(min) {
 
 function seenOnceCard(s) {
   const list = s.seenOnce;
-  const shown = list.slice(0, 6);
+  const shown = list.slice(0, 5);
   const more = list.length - shown.length;
   return `
   <section class="card card-once">

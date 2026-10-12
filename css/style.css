@@ -461,3 +461,7 @@ code {
 .card-map .leaflet-container { background: #0e1630; font-family: var(--sans); }
 .map-inset { opacity: 0; transition: opacity 0.6s ease; }
 .map-inset.shown { opacity: 1; }
+
+.card-title.title-mid { font-size: 80px; }
+.card-title.title-long { font-size: 66px; line-height: 1.04; }
+.first-day { font-family: var(--display); font-weight: 600; font-size: 44px; line-height: 1.2; margin: 56px 0 0; color: #b4492b; }

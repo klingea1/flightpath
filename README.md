@@ -19,8 +19,9 @@ there is no server, account, or database.
 1. **Cover**: every checklist location connected in date order, drawn as your flight path.
 2. **Headline numbers**: species, checklists, hours, miles traveled, lifers (or days
    afield in your first year on eBird), locations, and biggest day.
-3. **First checklist of the year**: where, when, and what was on it. The export
-   doesn't record which bird came first, so this is the checklist, not the bird.
+3. **First checklist of the year**: where, when, and what was on it, plus that
+   day's totals. The export doesn't record which bird came first, so this is
+   the checklist, not the bird.
 4. **Lifers**: new species in the order you found them. Skipped if there were none.
 5. **Top patch**: your most-visited location and any species you found only there.
 6. **Top birds**: top five species by how many of your checklists they appeared on.
@@ -38,12 +39,12 @@ there is no server, account, or database.
    named, and when it zooms the map far out, an inset shows home. The map
    loads only when this card is reached.
 
-   The card plays your year as a flight: pins pop in by date at home, and
-   the camera flies out to each trip (labeled, unless the location name
-   looks private) and back. Home pins and flights each have a time budget,
-   so most years play in 10 to 20 seconds. Tapping skips to the end, Replay
-   runs it again, and saving always captures the final frame. With reduced
-   motion turned on, the card shows the final frame directly.
+   The card plays your year one month per second: the map frames wherever
+   you birded that month, and all of that month's places bloom at once
+   (new places pop in, revisited ones grow). Any year plays in about 12
+   seconds, however much someone traveled. Tapping skips to the end,
+   Replay runs it again, and saving always captures the final frame. With
+   reduced motion turned on, the card shows the final frame directly.
 12. **Summary**: the whole year on one card, the one most worth posting.
 
 ## Development
@@ -72,8 +73,19 @@ npm test           # node --test
 - `data/map.topo.json`: outlines for the map: Natural Earth countries and lakes, Census state lines, Michigan counties (all public domain). Rebuild with `tools/build-map.mjs`.
 - `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards, [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2) and [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for the map
 
+## Privacy
+
+Cards are made to be posted publicly, so:
+
+- Coordinates are stripped from every location name. eBird often names personal
+  locations after them, like "Michigan 66 (42.766, -85.074)".
+- Map pins are snapped to a ~2 km grid, on a map with no streets.
+- The page never uploads the export anywhere.
+
 ## Known gaps
 
 - Species filtering uses name patterns (drops "sp.", slashes, hybrids, domestics).
   Bundling the eBird taxonomy file would make it exact.
+- The export doesn't flag exotic or escapee species, so species and lifer
+  counts can run slightly higher than eBird's own totals.
 - "Miles traveled" counts every traveling checklist, on foot or by car. The export has no travel mode, so the two are not split.

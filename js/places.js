@@ -125,39 +125,22 @@ export function buildPlaces(lists) {
   };
 }
 
-// Location names that could locate someone: coordinates, or words that mark a
-// private place. Trip labels fall back to the region name for these.
-const PRIVATE_NAME = /-?\d{1,3}\.\d{2,}|\b(yard|home|house|backyard|residence|feeders?|cottage|cabin|apartment|condo|farm)\b/i;
-
-export function tripLabel(location, state) {
-  const region = regionName(state);
-  const name = String(location || '').trim();
-  if (!name || PRIVATE_NAME.test(name) || name.length > 40) return region;
-  return `${name}, ${region}`;
-}
-
-// A trip stays one leg while its stops are within this distance of where it started.
-const LEG_KM = 150;
-
-// Splits the year into legs: stretches at home, and trips away. The map card
-// flies between legs and plays each leg's visits in order.
-export function buildLegs(places) {
-  const legs = [];
-  for (const v of places.sequence) {
-    const pin = places.pins[v.pin];
-    const last = legs[legs.length - 1];
-    const sameLeg = last && (pin.home
-      ? last.home
-      : !last.home && distanceKm(places.pins[last.visits[0].pin], pin) <= LEG_KM);
-    if (sameLeg) {
-      last.visits.push(v);
-    } else {
-      legs.push({ home: pin.home, visits: [v], label: pin.home ? null : tripLabel(v.location, v.state) });
+// Splits the year into months for the map card, from the first month with a
+// checklist to the last. Each month knows its pins, its bounds, and which
+// places away from home it reached.
+export function buildMonths(places) {
+  const months = Array.from({ length: 12 }, (_, month) => ({ month, visits: [], regions: [] }));
+  for (const v of places.sequence) months[Number(v.date.slice(5, 7)) - 1].visits.push(v);
+  const used = months.filter((m) => m.visits.length);
+  if (!used.length) return [];
+  const span = months.slice(used[0].month, used[used.length - 1].month + 1);
+  for (const m of span) {
+    m.bounds = boundsOf(m.visits.map((v) => places.pins[v.pin]));
+    const away = new Map();
+    for (const v of m.visits) {
+      if (!places.pins[v.pin].home && v.state !== places.homeRegion.code) away.set(v.state, (away.get(v.state) || 0) + 1);
     }
+    m.regions = [...away].sort((a, b) => b[1] - a[1]).map(([code]) => regionName(code));
   }
-  for (const leg of legs) {
-    const pts = leg.visits.map((v) => places.pins[v.pin]);
-    leg.bounds = boundsOf(pts);
-  }
-  return legs;
+  return span;
 }

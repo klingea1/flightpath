@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { snap, buildPlaces, regionName, distanceKm, tripLabel, buildLegs } from '../js/places.js';
+import { snap, buildPlaces, regionName, distanceKm, buildMonths } from '../js/places.js';
 
 const list = (date, lat, lng, state = 'US-MI', county = 'Kent') => ({ date, startMin: 480, lat, lng, state, county });
 
@@ -45,28 +45,21 @@ test('region names cover states, provinces, and countries', () => {
   assert.equal(regionName('CR-P'), 'Costa Rica');
 });
 
-test('trip labels never show coordinates or private place names', () => {
-  assert.equal(tripLabel('Magee Marsh', 'US-OH'), 'Magee Marsh, Ohio');
-  assert.equal(tripLabel('Grand Rapids, Kent County, Michigan, US (42.948, -85.592)', 'US-MI'), 'Michigan');
-  assert.equal(tripLabel("Mom's backyard", 'US-OH'), 'Ohio');
-  assert.equal(tripLabel('Lake cottage', 'CA-ON'), 'Ontario');
-  assert.equal(tripLabel('', 'US-AZ'), 'Arizona');
-});
-
-test('legs split home stretches from trips and group nearby trip stops', () => {
+test('months run from first to last active month, naming places away', () => {
   const lists = [
-    list('2026-01-01', 42.95, -85.6),
-    list('2026-01-02', 42.97, -85.65),
-    list('2026-05-14', 41.6265, -83.1911, 'US-OH', 'Lucas'),
-    list('2026-05-16', 41.9303, -82.5108, 'CA-ON', 'Essex'),
-    list('2026-05-20', 42.95, -85.6),
-    list('2026-08-03', 31.4485, -110.3036, 'US-AZ', 'Cochise'),
-  ].map((c, i) => ({ ...c, location: ['A', 'B', 'Magee Marsh', 'Point Pelee', 'A', 'Ramsey Canyon'][i] }));
-  const legs = buildLegs(buildPlaces(lists));
-  assert.deepEqual(legs.map((l) => [l.home, l.visits.length, l.label]), [
-    [true, 2, null],
-    [false, 2, 'Magee Marsh, Ohio'],
-    [true, 1, null],
-    [false, 1, 'Ramsey Canyon, Arizona'],
+    list('2026-02-01', 42.95, -85.6),
+    list('2026-02-20', 42.97, -85.65),
+    list('2026-03-14', 27.9, -82.5, 'US-FL', 'Hillsborough'),
+    list('2026-03-15', 42.95, -85.6),
+    list('2026-05-03', 42.95, -85.6),
+  ];
+  const months = buildMonths(buildPlaces(lists));
+  assert.deepEqual(months.map((m) => [m.month, m.visits.length, m.regions.join()]), [
+    [1, 2, ''],
+    [2, 2, 'Florida'],
+    [3, 0, ''],
+    [4, 1, ''],
   ]);
+  assert.equal(months[1].bounds[0][0], 27.9);
+  assert.equal(months[2].bounds, null);
 });

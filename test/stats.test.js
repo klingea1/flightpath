@@ -162,3 +162,16 @@ test('grind skips incomplete, short, and incidental lists', () => {
   assert.equal(s.grind.date, '2026-01-05');
   assert.deepEqual(s.seenOnce.map((b) => b.name), ['Snowy Owl', 'Canada Goose']);
 });
+
+test('location names lose coordinates and get readable separators', async () => {
+  const { displayLocation } = await import('../js/stats.js');
+  assert.equal(displayLocation('Michigan 66 (42.766, -85.074)'), 'Michigan 66');
+  assert.equal(displayLocation('Inspiration Point Trailhead (45.219, -84.389)'), 'Inspiration Point Trailhead');
+  assert.equal(displayLocation('Sax-Zim Bog--Correction Line Rd. lek'), 'Sax-Zim Bog – Correction Line Rd. lek');
+  assert.equal(displayLocation('42.9485, -85.5921', 'Kent'), 'Somewhere in Kent County');
+  assert.equal(displayLocation('Grand Rapids, Kent County, Michigan, US (42.948, -85.592)'), 'Grand Rapids, Kent County, Michigan, US');
+  assert.equal(displayLocation('stakeout Crested Caracara, Olivet (2026)'), 'stakeout Crested Caracara, Olivet (2026)');
+  assert.equal(displayLocation('Kanaha Beach Park (20.9, -156.441)'), 'Kanaha Beach Park');
+  assert.equal(displayLocation('Free Soil Road towards Campground (44.142, -86.4)'), 'Free Soil Road towards Campground');
+  assert.equal(displayLocation('Trail mile 1.5'), 'Trail mile 1.5');
+});
