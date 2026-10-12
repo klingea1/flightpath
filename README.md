@@ -51,8 +51,7 @@ there is no server, account, or database.
    reduced motion turned on, the card shows the final frame directly.
 12. **Summary**: the whole year on one card, the one most worth posting. Instead
    of top birds (the same for everyone), it shows four highlights picked for
-   each birder in `js/highlights.js`: their home state's year list, their bird
-   of the year (a lifer seen on just one checklist, usually a chase), then the
+   each birder in `js/highlights.js`: their home state's year list, then the
    most impressive of growth over last year, biggest day, longest streak,
    lifers, and states visited, with modest fallbacks for lighter years.
 

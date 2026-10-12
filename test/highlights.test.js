@@ -4,14 +4,14 @@ import { pickHighlights } from '../js/highlights.js';
 
 const base = {
   year: 2026, species: 300, homeRegion: { code: 'US-MI', species: 240 }, previousYearSpecies: 0,
-  regions: ['US-MI'], birdOfYear: null, bigDay: { species: 10 }, longestStreak: 1,
+  regions: ['US-MI'], bigDay: { species: 10 }, longestStreak: 1,
   firstYearOnEbird: false, lifers: [], daysAfield: 50, locations: 12, counties: 3,
 };
 const labels = (s) => pickHighlights(s).map((h) => h.label);
 
-test('home state year list leads, bird of the year follows, always four lines', () => {
-  const h = labels({ ...base, birdOfYear: 'Northern Hawk Owl', longestStreak: 115, lifers: Array(132).fill('x') });
-  assert.deepEqual(h, ['Michigan year list', 'Bird of the year', 'Longest streak', 'Lifers']);
+test('home state year list leads, then the most notable achievements', () => {
+  const h = labels({ ...base, longestStreak: 115, lifers: Array(132).fill('x'), previousYearSpecies: 290 });
+  assert.deepEqual(h, ['Michigan year list', 'Longest streak', 'Lifers', 'Versus 2025']);
 });
 
 test('the state list is skipped when it equals the year total', () => {

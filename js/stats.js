@@ -217,11 +217,6 @@ export function computeYear(rows, year) {
       allLists.filter((c) => c.date.startsWith(String(year - 1))).flatMap((c) => [...c.species])
     ).size,
     regions: [...new Set(lists.map((c) => c.state).filter(Boolean))],
-    // A lifer that showed up on a single checklist: usually a chase or a
-    // lucky find. Meaningless in someone's first year, when everything is new.
-    birdOfYear: earliestEver.startsWith(prefix)
-      ? null
-      : lifers.find((name) => speciesLists.get(name) === 1) || null,
     hours: minutes / 60,
     miles,
     daysAfield: daySpecies.size,

@@ -1,6 +1,5 @@
-// Picks the summary card's four highlights: the home-state year list, the
-// bird of the year when there is one, then the most impressive of a few
-// personal achievements. Like personas, each candidate scores how notable it
+// Picks the summary card's four highlights: the home-state year list, then
+// the most impressive of a few personal achievements. Like personas, each candidate scores how notable it
 // is. Modest fallbacks fill in for lighter years, so every card has four.
 
 import { regionName } from './places.js';
@@ -21,8 +20,6 @@ export function pickHighlights(s) {
     label: `${regionName(s.homeRegion.code)} year list`,
     value: `${fmt(s.homeRegion.species)} species`,
   };
-
-  const bird = s.birdOfYear && { label: 'Bird of the year', value: s.birdOfYear };
 
   const notable = [
     s.previousYearSpecies >= 20 && s.species > s.previousYearSpecies && {
@@ -50,7 +47,7 @@ export function pickHighlights(s) {
     s.longestStreak >= 2 && { label: 'Longest streak', value: `${fmt(s.longestStreak)} days` },
   ].filter(Boolean);
 
-  const picked = [lead, bird].filter(Boolean);
+  const picked = [lead].filter(Boolean);
   for (const h of [...notable, ...fallbacks]) {
     if (picked.length >= 4) break;
     if (!picked.some((p) => p.label === h.label)) picked.push({ label: h.label, value: h.value });
