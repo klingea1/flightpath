@@ -97,8 +97,10 @@ export function computeYear(rows, year) {
   const firstSeen = new Map();
   for (const c of allLists) {
     for (const s of c.species) {
+      // Date plus start time, so same-day lifers keep the order you found them.
+      const when = `${c.date} ${String(c.startMin ?? 0).padStart(4, '0')}`;
       const prev = firstSeen.get(s);
-      if (!prev || c.date < prev) firstSeen.set(s, c.date);
+      if (!prev || when < prev) firstSeen.set(s, when);
     }
   }
   const earliestEver = allLists.reduce((m, c) => (c.date < m ? c.date : m), '9999');
@@ -196,7 +198,7 @@ export function computeYear(rows, year) {
     checklists: lists.length,
     species: species.size,
     lifers,
-    liferList: lifers.map((name) => ({ name, date: firstSeen.get(name) })),
+    liferList: lifers.map((name) => ({ name, date: firstSeen.get(name).slice(0, 10) })),
     firstList: first && {
       date: first.date,
       startMin: first.startMin,

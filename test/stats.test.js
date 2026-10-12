@@ -183,3 +183,11 @@ test('persona: a three-week streak is not enough for Daily Devotee', () => {
   }
   assert.notEqual(pickPersona(computeYear(parseEbirdExport(csv(lines)), 2026)).id, 'streak');
 });
+
+test('same-day lifers are ordered by checklist time', () => {
+  const rows = parseEbirdExport(csv([
+    'S2,Vermilion Flycatcher,a,30000,1,US-AZ,Pima,L2,B,32.2,-110.9,2026-10-10,04:30 PM,Traveling,60,1,1',
+    'S1,Cactus Wren,b,35000,1,US-AZ,Pima,L1,A,32.2,-110.9,2026-10-10,08:00 AM,Traveling,60,1,1',
+  ]));
+  assert.deepEqual(computeYear(rows, 2026).lifers, ['Cactus Wren', 'Vermilion Flycatcher']);
+});
