@@ -21,6 +21,7 @@ const COLUMN_ALIASES = {
   allObs: ['all obs reported'],
   distanceKm: ['distance traveled (km)'],
   distanceMi: ['distance traveled (mi)'],
+  observers: ['number of observers'],
 };
 
 const REQUIRED = ['submissionId', 'commonName', 'date'];
@@ -155,6 +156,7 @@ export function parseEbirdExport(text) {
       durationMin: num(get(r, 'duration')),
       allObs: get(r, 'allObs') === '1',
       distanceMi,
+      observers: num(get(r, 'observers')),
     });
   }
   if (!rows.length) throw new Error('No observations could be read from that file.');

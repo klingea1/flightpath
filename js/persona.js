@@ -63,6 +63,21 @@ export const PERSONAS = [
     evidence: (s) => `${s.locations} different locations this year`,
   },
   {
+    id: 'lone',
+    name: 'Lone Wanderer',
+    // Only when most checklists record party size.
+    score: (s) => (s.shares.observersKnown >= 0.5 ? s.shares.solo / 0.9 : 0),
+    blurb: () => "Just you, your binoculars, and whatever's out there.",
+    evidence: (s) => `${pct(s.shares.solo)} of your checklists were solo`,
+  },
+  {
+    id: 'flock',
+    name: 'Field Trip Regular',
+    score: (s) => (s.shares.observersKnown >= 0.5 ? s.shares.group / 0.25 : 0),
+    blurb: () => 'Club walks, count days, and a scope line full of friends.',
+    evidence: (s) => `${pct(s.shares.group)} of your checklists were with four or more birders`,
+  },
+  {
     id: 'streak',
     name: 'Daily Devotee',
     // A month-long streak to qualify, so a good week or two doesn't

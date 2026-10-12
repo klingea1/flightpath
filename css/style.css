@@ -259,6 +259,8 @@ code {
 .persona-hopper     { background: linear-gradient(160deg, #3b1b5a 0%, #8c3f8f 100%); }
 .persona-streak     { background: linear-gradient(160deg, #5a1830 0%, #b0384f 100%); }
 .persona-generalist { background: linear-gradient(160deg, #23324a 0%, #4b6b7a 100%); }
+.persona-lone       { background: linear-gradient(160deg, #1d2b3a 0%, #46607a 100%); }
+.persona-flock      { background: linear-gradient(160deg, #5a3a12 0%, #b07a2a 100%); }
 .persona-fledgling  { background: linear-gradient(160deg, #3a4a1f 0%, #7a9a3a 100%); }
 
 /* Shared card text */

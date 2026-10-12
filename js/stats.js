@@ -55,6 +55,7 @@ export function groupChecklists(rows) {
         lat: r.lat,
         lng: r.lng,
         allObs: r.allObs,
+        observers: r.observers,
         species: new Set(),
       };
       lists.set(r.submissionId, c);
@@ -189,6 +190,7 @@ export function computeYear(rows, year) {
   for (const c of lists) monthly[Number(c.date.slice(5, 7)) - 1]++;
 
   const timed = lists.filter((c) => c.startMin !== null);
+  const withObservers = lists.filter((c) => c.observers >= 1);
   const share = (pred, pool = lists) => (pool.length ? pool.filter(pred).length / pool.length : 0);
   const traveling = lists.filter((c) => c.protocol === 'traveling');
   const singleVisitLocs = [...locationLists.values()].filter((n) => n === 1).length;
@@ -241,6 +243,11 @@ export function computeYear(rows, year) {
       traveling: share((c) => c.protocol === 'traveling'),
       lakeshore: share(isLakeshore),
       singleVisit: locationLists.size ? singleVisitLocs / locationLists.size : 0,
+      // Party size, from checklists that recorded it (older exports may not).
+      solo: share((c) => c.observers === 1, withObservers),
+      company: share((c) => c.observers >= 2, withObservers),
+      group: share((c) => c.observers >= 4, withObservers),
+      observersKnown: lists.length ? withObservers.length / lists.length : 0,
     },
     avgTravelMiles: traveling.length
       ? traveling.reduce((sum, c) => sum + (c.distanceMi || 0), 0) / traveling.length

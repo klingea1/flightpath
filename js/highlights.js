@@ -43,6 +43,9 @@ export function pickHighlights(s) {
     s.bigDay && { label: 'Biggest day', value: `${fmt(s.bigDay.species)} species` },
     { label: 'Days afield', value: fmt(s.daysAfield) },
     { label: 'Places birded', value: fmt(s.locations) },
+    s.shares?.observersKnown >= 0.5 && s.shares.company > 0 && {
+      label: 'Birded with company', value: `${Math.round(s.shares.company * 100)}% of checklists`,
+    },
     { label: 'Counties birded', value: fmt(s.counties) },
     s.longestStreak >= 2 && { label: 'Longest streak', value: `${fmt(s.longestStreak)} days` },
   ].filter(Boolean);

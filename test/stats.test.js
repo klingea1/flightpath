@@ -191,3 +191,27 @@ test('same-day lifers are ordered by checklist time', () => {
   ]));
   assert.deepEqual(computeYear(rows, 2026).lifers, ['Cactus Wren', 'Vermilion Flycatcher']);
 });
+
+const OBS_HEADER = 'Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Number of Observers';
+function partyYear(sizes) {
+  // Varied times and three spots, so no other persona stands out.
+  const times = ['07:30', '12:00', '18:30'];
+  const lines = sizes.map((n, i) =>
+    `S${i},Blue Jay,a,1,1,US-MI,Kent,L${i % 3},Spot ${i % 3},42.9,-85.6,2026-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + 2 * Math.floor(i / 12)).padStart(2, '0')},${times[i % 3]},Traveling,30,1,1,${n}`);
+  return computeYear(parseEbirdExport([OBS_HEADER, ...lines].join('\n')), 2026);
+}
+
+test('party size: solo birders are Lone Wanderers, group birders Field Trip Regulars', () => {
+  assert.equal(pickPersona(partyYear(Array(20).fill(1))).id, 'lone');
+  assert.equal(pickPersona(partyYear([...Array(10).fill(6), ...Array(10).fill(1)])).id, 'flock');
+  const s = partyYear([1, 1, 2, 5]);
+  assert.equal(s.shares.solo, 0.5);
+  assert.equal(s.shares.company, 0.5);
+  assert.equal(s.shares.group, 0.25);
+});
+
+test('exports without party size never trigger the party personas', () => {
+  const s = computeYear(parseEbirdExport(readFileSync(new URL('../samples/demo.csv', import.meta.url), 'utf8')), 2026);
+  assert.equal(s.shares.observersKnown, 0);
+  assert.ok(!['lone', 'flock'].includes(pickPersona(s).id));
+});

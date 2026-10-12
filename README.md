@@ -34,7 +34,8 @@ there is no server, account, or database.
 8. **Months**: checklists per month, with your busiest month called out.
 9. **Grind**: your slowest complete checklist of an hour or more, by minutes per species.
 10. **Persona**: one of a set of birding personas, with the three stats that
-   back it up. Logic is in `js/persona.js`. Thresholds are first guesses to
+   back it up. Two personas come from party size (the export's "Number of
+   Observers"): Lone Wanderer and Field Trip Regular. Logic is in `js/persona.js`. Thresholds are first guesses to
    tune against real exports. Add `?persona=<id>` to the URL to preview any
    persona's card (for example, `?persona=lakeshore`).
 11. **Map**: every place you birded, on an outline map with no streets. Pins
@@ -53,7 +54,8 @@ there is no server, account, or database.
    of top birds (the same for everyone), it shows four highlights picked for
    each birder in `js/highlights.js`: their home state's year list, then the
    most impressive of growth over last year, biggest day, longest streak,
-   lifers, and states visited, with modest fallbacks for lighter years.
+   lifers, and states visited, with modest fallbacks for lighter years
+   (including how often they birded with company).
 
 Each card animates once as it's shown (counts tick up, lists cascade, bars
 grow) and then holds still. Sharing freezes the finished card first, so the
