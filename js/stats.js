@@ -37,6 +37,7 @@ export function groupChecklists(rows) {
         state: r.state,
         lat: r.lat,
         lng: r.lng,
+        allObs: r.allObs,
         species: new Set(),
       };
       lists.set(r.submissionId, c);
@@ -142,6 +143,27 @@ export function computeYear(rows, year) {
     patchOnly = [...locationSpecies.get(topLoc[0])].filter((sp) => !elsewhere.has(sp)).sort(byTaxon);
   }
 
+  // Birds that showed up on exactly one checklist, in the order you saw them.
+  const onceList = new Map();
+  for (const c of chronological) {
+    for (const sp of c.species) if (speciesLists.get(sp) === 1) onceList.set(sp, c);
+  }
+  const seenOnce = [...onceList]
+    .map(([name, c]) => ({ name, date: c.date, location: c.location }))
+    .sort((a, b) => a.date.localeCompare(b.date) || byTaxon(a.name, b.name));
+
+  // The grind: the complete checklist, an hour or longer, with the most
+  // minutes per species. Incomplete lists are skipped, since a long list with
+  // one target species is a stakeout, not a slow day.
+  let grind = null;
+  for (const c of lists) {
+    if (!c.allObs || c.protocol === 'incidental' || !(c.durationMin >= 60) || !c.species.size) continue;
+    const pace = c.durationMin / c.species.size;
+    if (!grind || pace > grind.pace || (pace === grind.pace && c.durationMin > grind.durationMin)) {
+      grind = { pace, durationMin: c.durationMin, date: c.date, location: c.location, species: [...c.species].sort(byTaxon) };
+    }
+  }
+
   const monthly = Array(12).fill(0);
   for (const c of lists) monthly[Number(c.date.slice(5, 7)) - 1]++;
 
@@ -164,6 +186,8 @@ export function computeYear(rows, year) {
     },
     topSpeciesList,
     monthly,
+    seenOnce,
+    grind,
     firstYearOnEbird: earliestEver.startsWith(prefix),
     hours: minutes / 60,
     miles,

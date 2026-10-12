@@ -24,12 +24,15 @@ there is no server, account, or database.
 4. **Lifers**: new species in the order you found them. Skipped if there were none.
 5. **Top patch**: your most-visited location and any species you found only there.
 6. **Top birds**: top five species by how many of your checklists they appeared on.
-7. **Months**: checklists per month, with your busiest month called out.
-8. **Persona**: one of a set of birding personas, with the three stats that
+   When #1 is a Kent County staple, the card admits it.
+7. **Seen exactly once**: birds that showed up on a single checklist all year.
+8. **Months**: checklists per month, with your busiest month called out.
+9. **Grind**: your slowest complete checklist of an hour or more, by minutes per species.
+10. **Persona**: one of a set of birding personas, with the three stats that
    back it up. Logic is in `js/persona.js`. Thresholds are first guesses to
    tune against real exports. Add `?persona=<id>` to the URL to preview any
    persona's card (for example, `?persona=lakeshore`).
-9. **Summary**: the whole year on one card, the one most worth posting.
+11. **Summary**: the whole year on one card, the one most worth posting.
 
 ## Development
 
@@ -40,7 +43,7 @@ npm start          # python3 -m http.server 8000
 npm test           # node --test
 ```
 
-`samples/demo.csv` is a simulated export used by the "Try the demo data" button and the tests.
+`samples/demo.csv` is a simulated export (with a few added checklists to exercise the seen-once and grind cards) used by the "Try the demo data" button and the tests.
 
 ## Layout
 

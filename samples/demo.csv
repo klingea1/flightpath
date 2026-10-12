@@ -238,3 +238,19 @@ S5000029,Blue Jay,Cyanocitta cristata,19500,2,US-MI,Kent,Provin Trails,L100004,4
 S5000029,Downy Woodpecker,Dryobates pubescens,14500,2,US-MI,Kent,Provin Trails,L100004,43.021,-85.5895,2026-07-08,17:00,Traveling,72,1,2.08,,,,"Clear skies, active birds."
 S5000029,Northern Cardinal,Cardinalis cardinalis,24125,4,US-MI,Kent,Provin Trails,L100004,43.021,-85.5895,2026-07-08,17:00,Traveling,72,1,2.08,,,,"Clear skies, active birds."
 S5000029,Red-tailed Hawk,Buteo jamaicensis,9800,1,US-MI,Kent,Provin Trails,L100004,43.021,-85.5895,2026-07-08,17:00,Traveling,72,1,2.08,,,,"Clear skies, active birds."
+S5000046,Mourning Dove,Zenaida macroura,11200,2,US-MI,Kent,Provin Trails,L100004,43.021,-85.5895,2026-07-12,13:00,Traveling,160,1,2.4,,,,"Hot, still, and quiet."
+S5000046,American Robin,Turdus migratorius,22100,3,US-MI,Kent,Provin Trails,L100004,43.021,-85.5895,2026-07-12,13:00,Traveling,160,1,2.4,,,,"Hot, still, and quiet."
+S5000046,Blue Jay,Cyanocitta cristata,19500,1,US-MI,Kent,Provin Trails,L100004,43.021,-85.5895,2026-07-12,13:00,Traveling,160,1,2.4,,,,"Hot, still, and quiet."
+S5000047,Canada Goose,Branta canadensis,390,8,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000047,Mallard,Anas platyrhynchos,452,3,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000047,American Robin,Turdus migratorius,22100,4,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000047,Song Sparrow,Melospiza melodia,23900,2,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000047,Baltimore Oriole,Icterus galbula,23990,1,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000047,Yellow Warbler,Setophaga petechia,24050,2,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000047,warbler sp. (Parulidae sp.),Parulidae sp.,24100,1,US-MI,Kent,Millennium Park,L100001,42.9421,-85.7325,2026-05-12,06:30,Traveling,95,1,2.1,,,,Warblers moving.
+S5000048,Black-capped Chickadee,Poecile atricapillus,20110,3,US-MI,Kent,Blandford Nature Center,L100003,42.9931,-85.7175,2026-05-16,07:00,Stationary,45,1,,,,,
+S5000048,Blue Jay,Cyanocitta cristata,19500,2,US-MI,Kent,Blandford Nature Center,L100003,42.9931,-85.7175,2026-05-16,07:00,Stationary,45,1,,,,,
+S5000048,Scarlet Tanager,Piranga olivacea,24110,1,US-MI,Kent,Blandford Nature Center,L100003,42.9931,-85.7175,2026-05-16,07:00,Stationary,45,1,,,,,
+S5000049,Sandhill Crane,Antigone canadensis,5600,2,US-MI,Kent,Reeds Lake,L100002,42.9485,-85.5921,2026-06-14,08:15,Traveling,60,1,1.5,,,,
+S5000049,Canada Goose,Branta canadensis,390,10,US-MI,Kent,Reeds Lake,L100002,42.9485,-85.5921,2026-06-14,08:15,Traveling,60,1,1.5,,,,
+S5000049,Mallard,Anas platyrhynchos,452,4,US-MI,Kent,Reeds Lake,L100002,42.9485,-85.5921,2026-06-14,08:15,Traveling,60,1,1.5,,,,

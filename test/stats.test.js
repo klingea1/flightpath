@@ -100,13 +100,15 @@ test('persona: fewer than five checklists is a Fledgling', () => {
 test('demo export parses end to end', () => {
   const rows = parseEbirdExport(readFileSync(new URL('../samples/demo.csv', import.meta.url), 'utf8'));
   const s = computeYear(rows, 2026);
-  assert.equal(s.checklists, 45);
-  assert.equal(s.species, 10);
+  assert.equal(s.checklists, 49);
+  assert.equal(s.species, 14);
+  assert.deepEqual(s.seenOnce.map((b) => b.name), ['Baltimore Oriole', 'Yellow Warbler', 'Scarlet Tanager', 'Sandhill Crane']);
+  assert.equal(s.grind.durationMin, 160);
   assert.equal(pickPersona(s).id, 'generalist');
 });
 
 test('reads the CSV out of eBird zips, deflated or stored', async () => {
-  const demo = readFileSync(new URL('../samples/demo.csv', import.meta.url), 'utf8');
+  const demo = readFileSync(new URL('fixtures/small.csv', import.meta.url), 'utf8');
   for (const name of ['ebird-deflated.zip', 'ebird-stored.zip']) {
     const bytes = new Uint8Array(readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
     assert.ok(isZip(bytes));
@@ -140,4 +142,23 @@ test('first checklist, top birds, patch-only species, and months', () => {
   assert.deepEqual(s.topLocation.only, ['Canada Goose', 'Snowy Owl']);
   assert.equal(s.monthly[0], 2);
   assert.equal(s.monthly[4], 2);
+});
+
+test('grind skips incomplete, short, and incidental lists', () => {
+  const rows = parseEbirdExport(csv([
+    // Incomplete stakeout: long, one species, but not all birds reported.
+    'S1,Snowy Owl,a,1,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-03,10:00,Stationary,240,0,',
+    // Short and slow, but under an hour.
+    'S2,Blue Jay,b,2,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-04,10:00,Stationary,50,1,',
+    // The real grind: 120 minutes for 2 species.
+    'S3,Blue Jay,b,2,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-05,10:00,Traveling,120,1,1',
+    'S3,Mallard,c,3,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-05,10:00,Traveling,120,1,1',
+    // A faster list: 90 minutes for 3 species.
+    'S4,Blue Jay,b,2,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-06,10:00,Traveling,90,1,1',
+    'S4,Mallard,c,3,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-06,10:00,Traveling,90,1,1',
+    'S4,Canada Goose,d,1,1,US-MI,Kent,L1,A,42.9,-85.6,2026-01-06,10:00,Traveling,90,1,1',
+  ]));
+  const s = computeYear(rows, 2026);
+  assert.equal(s.grind.date, '2026-01-05');
+  assert.deepEqual(s.seenOnce.map((b) => b.name), ['Snowy Owl', 'Canada Goose']);
 });

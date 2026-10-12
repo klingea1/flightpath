@@ -178,6 +178,15 @@ function patchCard(s) {
   </section>`;
 }
 
+// Birds nearly every Kent County birder logs constantly. If one tops your
+// list, the card says so.
+const KENT_STAPLES = new Set([
+  'Canada Goose', 'Mallard', 'American Robin', 'Northern Cardinal', 'Blue Jay',
+  'Black-capped Chickadee', 'American Crow', 'Mourning Dove', 'European Starling',
+  'House Sparrow', 'Song Sparrow', 'Red-winged Blackbird', 'American Goldfinch',
+  'Downy Woodpecker', 'Red-bellied Woodpecker', 'Ring-billed Gull',
+]);
+
 function topBirdsCard(s) {
   const [top, ...rest] = s.topSpeciesList;
   return `
@@ -187,10 +196,47 @@ function topBirdsCard(s) {
       <span class="rank">No. 1</span>
       <h2 class="card-title">${esc(top.name)}</h2>
       <p class="card-sub">On ${Math.round(top.share * 100)}% of your checklists, ${plural(top.checklists, 'list')} in all</p>
+      ${KENT_STAPLES.has(top.name) ? '<p class="quip">Same as basically everyone in Kent County.</p>' : ''}
     </div>
     <ol class="rank-list" start="2">
       ${rest.map((b, i) => `<li><span class="rank">${i + 2}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
     </ol>
+    ${footer(s.year)}
+  </section>`;
+}
+
+function formatDuration(min) {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return h ? `${h} hr${m ? ` ${m} min` : ''}` : `${m} min`;
+}
+
+function seenOnceCard(s) {
+  const list = s.seenOnce;
+  const shown = list.slice(0, 6);
+  const more = list.length - shown.length;
+  return `
+  <section class="card card-once">
+    <p class="eyebrow">Seen exactly once</p>
+    <div class="big-number">${fmt(list.length)}</div>
+    <p class="big-label">${list.length === 1 ? 'bird showed up on just one checklist' : 'birds showed up on just one checklist'}</p>
+    <ul class="once-list">
+      ${shown.map((b) => `<li><span class="once-name">${esc(b.name)}</span><span class="once-where">${formatDate(b.date)} &middot; ${esc(b.location)}</span></li>`).join('')}
+      ${more > 0 ? `<li class="more">and ${more} more</li>` : ''}
+    </ul>
+    ${footer(s.year)}
+  </section>`;
+}
+
+function grindCard(s) {
+  const g = s.grind;
+  return `
+  <section class="card card-grind">
+    <p class="eyebrow">Your grind</p>
+    <div class="grind-time">${formatDuration(g.durationMin)}</div>
+    <p class="grind-sub">at ${esc(g.location)} on ${formatDate(g.date)}, for ${plural(g.species.length, 'species', 'species')}</p>
+    <p class="grind-list">${g.species.map(esc).join(', ')}</p>
+    <p class="grind-close">Not every outing is a big day. You stayed out anyway.</p>
     ${footer(s.year)}
   </section>`;
 }
@@ -273,7 +319,9 @@ export function buildCards(stats, persona) {
     s.liferList.length && lifersCard(s),
     s.topLocation && s.checklists > 1 && patchCard(s),
     s.topSpeciesList.length && topBirdsCard(s),
+    s.seenOnce.length && s.checklists >= 10 && seenOnceCard(s),
     monthsCard(s),
+    s.grind && grindCard(s),
     personaCard(s, persona),
     summaryCard(s, persona),
   ].filter(Boolean);
