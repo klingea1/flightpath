@@ -52,8 +52,8 @@ export const PERSONAS = [
     id: 'trail',
     name: 'Trail Pounder',
     score: (s) => (s.shares.traveling >= 0.3 ? s.avgTravelMiles / 2.5 : 0),
-    blurb: (s) => `${Math.round(s.miles)} miles of trail, one checklist at a time.`,
-    evidence: (s) => `Your average walk covered ${s.avgTravelMiles.toFixed(1)} miles`,
+    blurb: (s) => `${Math.round(s.miles)} miles traveled, one checklist at a time.`,
+    evidence: (s) => `Your average traveling checklist covered ${s.avgTravelMiles.toFixed(1)} miles`,
   },
   {
     id: 'hopper',

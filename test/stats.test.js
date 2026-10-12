@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parseCsv, parseEbirdExport, parseTime, normalizeDate } from '../js/parse.js';
 import { speciesKey, computeYear, availableYears } from '../js/stats.js';
 import { pickPersona } from '../js/persona.js';
+import { isZip, csvFromZip } from '../js/unzip.js';
 
 const HEADER =
   'Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported,Distance Traveled (km)';
@@ -102,4 +103,19 @@ test('demo export parses end to end', () => {
   assert.equal(s.checklists, 45);
   assert.equal(s.species, 10);
   assert.equal(pickPersona(s).id, 'generalist');
+});
+
+test('reads the CSV out of eBird zips, deflated or stored', async () => {
+  const demo = readFileSync(new URL('../samples/demo.csv', import.meta.url), 'utf8');
+  for (const name of ['ebird-deflated.zip', 'ebird-stored.zip']) {
+    const bytes = new Uint8Array(readFileSync(new URL(`fixtures/${name}`, import.meta.url)));
+    assert.ok(isZip(bytes));
+    assert.equal(await csvFromZip(bytes), demo, name);
+  }
+  assert.equal(isZip(new TextEncoder().encode(demo)), false);
+});
+
+test('a zip without a CSV gives a friendly error', async () => {
+  const bytes = new Uint8Array(readFileSync(new URL('fixtures/no-csv.zip', import.meta.url)));
+  await assert.rejects(csvFromZip(bytes), /no CSV/);
 });

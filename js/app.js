@@ -1,4 +1,5 @@
 import { parseEbirdExport } from './parse.js';
+import { isZip, csvFromZip } from './unzip.js';
 import { availableYears, computeYear } from './stats.js';
 import { pickPersona, PERSONAS } from './persona.js';
 import { buildCards, CARD_W, CARD_H } from './slides.js';
@@ -92,12 +93,16 @@ async function saveCard() {
   }
 }
 
-function readFile(file) {
+// Accepts the zip eBird emails or the CSV inside it.
+async function readFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => load(reader.result);
-  reader.onerror = () => showError("That file couldn't be read.");
-  reader.readAsText(file);
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const text = isZip(bytes) ? await csvFromZip(bytes) : new TextDecoder('utf-8').decode(bytes);
+    load(text);
+  } catch (e) {
+    showError(e.message || "That file couldn't be read.");
+  }
 }
 
 $('file').addEventListener('change', (e) => readFile(e.target.files[0]));

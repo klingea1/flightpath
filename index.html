@@ -20,13 +20,13 @@
 
       <ol class="steps">
         <li>Request your data at <a href="https://ebird.org/downloadMyData" target="_blank" rel="noopener">ebird.org/downloadMyData</a>. eBird emails you a zip file within a few minutes.</li>
-        <li>Unzip it and drop <code>MyEBirdData.csv</code> below.</li>
+        <li>Drop that zip file below. No need to unzip it.</li>
       </ol>
 
       <label id="drop" class="drop" tabindex="0">
-        <input id="file" type="file" accept=".csv,text/csv" hidden>
-        <strong>Drop your CSV here</strong>
-        <span>or tap to choose a file</span>
+        <input id="file" type="file" accept=".zip,.csv,application/zip,text/csv" hidden>
+        <strong>Drop your eBird zip here</strong>
+        <span>or tap to choose it. The CSV inside works too.</span>
       </label>
       <button id="demo" class="link-button" type="button">No file handy? Try the demo data</button>
 

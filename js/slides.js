@@ -79,7 +79,7 @@ function headlineCard(s) {
   const tiles = [
     [fmt(s.checklists), 'checklists'],
     [fmt(s.hours), 'hours afield'],
-    [fmt(s.miles), 'miles walked'],
+    [fmt(s.miles), 'miles traveled'],
     s.firstYearOnEbird || !s.lifers.length
       ? [fmt(s.daysAfield), 'days afield']
       : [fmt(s.lifers.length), s.lifers.length === 1 ? 'lifer' : 'lifers'],
