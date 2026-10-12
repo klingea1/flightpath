@@ -40,6 +40,9 @@ function listEntries(bytes) {
 }
 
 async function inflateRaw(data) {
+  if (typeof DecompressionStream === 'undefined') {
+    throw new Error("This browser can't open zip files. Unzip it and drop in MyEBirdData.csv instead.");
+  }
   const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
