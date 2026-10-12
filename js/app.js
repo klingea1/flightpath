@@ -3,6 +3,8 @@ import { isZip, csvFromZip } from './unzip.js';
 import { availableYears, computeYear } from './stats.js';
 import { pickPersona, PERSONAS } from './persona.js';
 import { buildCards, CARD_W, CARD_H } from './slides.js';
+import { buildPlaces } from './places.js';
+import { mountMap } from './mapcard.js';
 
 const $ = (id) => document.getElementById(id);
 const state = { rows: null, year: null, index: 0, cards: [] };
@@ -45,7 +47,10 @@ function personaFor(stats) {
 
 function render() {
   const stats = computeYear(state.rows, state.year);
-  const html = buildCards(stats, personaFor(stats));
+  const places = buildPlaces(stats.lists);
+  state.stats = stats;
+  state.places = places;
+  const html = buildCards(stats, personaFor(stats), places);
   $('stage').innerHTML = html.map((h) => `<div class="card-frame">${h}</div>`).join('');
   state.cards = [...$('stage').querySelectorAll('.card-frame')];
   $('progress').innerHTML = state.cards.map(() => '<span></span>').join('');
@@ -59,6 +64,19 @@ function show() {
   [...$('progress').children].forEach((b, i) => b.classList.toggle('done', i <= state.index));
   $('prev').disabled = state.index === 0;
   $('next').disabled = state.index === state.cards.length - 1;
+  mountActiveMap();
+}
+
+// Leaflet needs a visible container to measure, so the map draws the first
+// time its card is shown. frame.mapReady lets saving wait for it.
+function mountActiveMap() {
+  const frame = state.cards[state.index];
+  const card = frame.querySelector('.card-map');
+  if (!card || frame.mapReady) return;
+  frame.mapReady = mountMap(card, state.places, state.stats).catch((e) => {
+    console.error(e);
+    card.querySelector('.map-host').textContent = "The map couldn't load.";
+  });
 }
 
 function go(delta) {
@@ -79,6 +97,7 @@ async function saveCard() {
   btn.disabled = true;
   btn.textContent = 'Saving...';
   try {
+    await state.cards[state.index].mapReady;
     const url = await window.htmlToImage.toPng(card, { width: CARD_W, height: CARD_H, pixelRatio: 1 });
     const a = document.createElement('a');
     a.href = url;

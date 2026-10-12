@@ -1,6 +1,8 @@
 // Builds the cards. Each card is a fixed 1080x1350 (4:5) element, the size
 // that reads best inline in Discord, and is scaled down to fit the screen.
 
+import { mapCardHtml } from './mapcard.js';
+
 export const CARD_W = 1080;
 export const CARD_H = 1350;
 
@@ -310,7 +312,7 @@ function summaryCard(s, persona) {
   </section>`;
 }
 
-export function buildCards(stats, persona) {
+export function buildCards(stats, persona, places) {
   const s = stats;
   return [
     coverCard(s),
@@ -323,6 +325,7 @@ export function buildCards(stats, persona) {
     monthsCard(s),
     s.grind && grindCard(s),
     personaCard(s, persona),
+    places && mapCardHtml(s, places),
     summaryCard(s, persona),
   ].filter(Boolean);
 }

@@ -32,7 +32,12 @@ there is no server, account, or database.
    back it up. Logic is in `js/persona.js`. Thresholds are first guesses to
    tune against real exports. Add `?persona=<id>` to the URL to preview any
    persona's card (for example, `?persona=lakeshore`).
-11. **Summary**: the whole year on one card, the one most worth posting.
+11. **Map**: every place you birded, on an outline map with no streets. Pins
+   are snapped to a grid of about 2 km so nobody's yard is identifiable, and
+   repeat visits grow a pin instead of adding one. Out-of-state travel is
+   named, and when it zooms the map far out, an inset shows home. The map
+   loads only when this card is reached. (The animated flight is next.)
+12. **Summary**: the whole year on one card, the one most worth posting.
 
 ## Development
 
@@ -43,6 +48,8 @@ npm start          # python3 -m http.server 8000
 npm test           # node --test
 ```
 
+`npm install` is only needed to rebuild the map outlines (see `tools/build-map.mjs`). The site itself has no dependencies to install.
+
 `samples/demo.csv` is a simulated export (with a few added checklists to exercise the seen-once and grind cards) used by the "Try the demo data" button and the tests.
 
 ## Layout
@@ -51,9 +58,12 @@ npm test           # node --test
 - `js/stats.js`: per-year numbers: species, lifers, effort, streaks, top location
 - `js/persona.js`: persona rules
 - `js/slides.js`: card markup
+- `js/places.js`: grid-snapped pins, home area, and trips for the map card
+- `js/mapcard.js`: the map card (Leaflet, drawn from bundled outlines with no tile service)
 - `js/unzip.js`: reads the CSV out of eBird's zip using the browser's built-in decompression
 - `js/app.js`: upload, navigation, and PNG export
-- `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT), used for saving cards
+- `data/map.topo.json`: outlines for the map: Natural Earth countries and lakes, Census state lines, Michigan counties (all public domain). Rebuild with `tools/build-map.mjs`.
+- `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards, [Leaflet](https://leafletjs.com) 1.9.4 (BSD-2) and [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for the map
 
 ## Known gaps
 

@@ -420,3 +420,42 @@ code {
 .grind-list { font-size: 34px; line-height: 1.4; opacity: 0.75; margin: 0 0 64px; }
 .grind-close { font-family: var(--display); font-weight: 600; font-size: 54px; line-height: 1.15; color: #f2d6a2; margin: 0; max-width: 860px; }
 
+
+/* Map */
+
+.card-map { background: #0e1630; padding: 0; }
+.map-host { position: absolute; inset: 0; background: #0e1630; }
+.map-head {
+  position: relative;
+  z-index: 1000;
+  padding: 96px 88px 120px;
+  background: linear-gradient(180deg, rgba(14, 22, 48, 0.96) 0%, rgba(14, 22, 48, 0.85) 60%, rgba(14, 22, 48, 0) 100%);
+}
+.card-map .eyebrow { color: #ffc979; }
+.card-map .card-sub { margin-bottom: 0; }
+.card-map .card-foot { z-index: 1000; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
+.map-inset {
+  position: absolute;
+  z-index: 1000;
+  right: 88px;
+  bottom: 130px;
+  width: 340px;
+  height: 340px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 201, 121, 0.7);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+.map-inset-host { position: absolute; inset: 0; }
+.map-inset span {
+  position: absolute;
+  z-index: 1000;
+  left: 16px;
+  top: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffc979;
+}
+.card-map .leaflet-container { background: #0e1630; font-family: var(--sans); }
