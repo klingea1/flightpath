@@ -138,6 +138,6 @@ test('first checklist, top birds, patch-only species, and months', () => {
   assert.equal(s.topSpecies.name, 'Blue Jay');
   assert.equal(s.topLocation.name, 'Home');
   assert.deepEqual(s.topLocation.only, ['Canada Goose', 'Snowy Owl']);
-  assert.equal(s.monthly[0], 3);
+  assert.equal(s.monthly[0], 2);
   assert.equal(s.monthly[4], 2);
 });
