@@ -68,7 +68,7 @@ const placesText = (n) => `${n} ${n === 1 ? 'place' : 'places'}`;
 
 export function mapCardHtml(s, places) {
   return `
-  <section class="card card-map">
+  <section class="card card-map" data-announce="${esc(`Where your year took you: ${placesText(places.pins.length)}. ${subtitle(places)}.`)}">
     <div class="map-host"></div>
     <div class="map-head">
       <p class="eyebrow">Where your year took you</p>
@@ -273,6 +273,8 @@ export async function mountMap(card, places, stats) {
   const shapes = await loadShapes();
   const visitedCounties = new Set(stats.lists.filter((c) => c.state === 'US-MI').map((c) => c.county));
   const ctx = makeCanvas(card.querySelector('.map-host'), 1080, 1350);
+  ctx.canvas.setAttribute('role', 'img');
+  ctx.canvas.setAttribute('aria-label', `Map of the ${placesText(places.pins.length)} you birded this year. ${subtitle(places)}.`);
   const W = 1080, H = 1350;
   // The base map is cached while the camera holds still, so frames that
   // only grow pins just copy it and draw the pins.
@@ -314,6 +316,7 @@ export async function mountMap(card, places, stats) {
   const insetBox = card.querySelector('.map-inset');
   if (insetBox) {
     const ictx = makeCanvas(insetBox.querySelector('.map-inset-host'), 340, 340);
+    ictx.canvas.setAttribute('aria-hidden', 'true');
     const icam = fitBounds(atLeast(places.homeBounds, 120), 340, 340, [50, 40, 30, 40], MAX_SCALE);
     const homePins = worldPins.filter((_, i) => places.pins[i].home).map((p) => ({ ...p, r: p.final * 0.6 }));
     drawBase(ictx, shapes, visitedCounties, icam);

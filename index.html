@@ -40,7 +40,9 @@
       <button id="back" class="link-button" type="button">&larr; Start over</button>
       <label id="year-picker" hidden>Year <select id="year"></select></label>
     </div>
-    <div class="progress" id="progress"></div>
+    <h1 id="deck-title" class="sr-only">Your Flight Path</h1>
+    <div class="progress" id="progress" aria-hidden="true"></div>
+    <p id="announce" class="sr-only" aria-live="polite"></p>
     <div class="stage" id="stage"></div>
     <div class="deck-controls">
       <button id="prev" type="button" aria-label="Previous card">&larr;</button>
