@@ -153,7 +153,9 @@ export function computeYear(rows, year) {
     .sort((a, b) => firstSeen.get(a).localeCompare(firstSeen.get(b)) || byTaxon(a, b));
 
   const topLoc = topBy(locationLists);
-  const bigDay = topBy(new Map([...daySpecies].map(([d, s]) => [d, s.size])));
+  const topDay = topBy(new Map([...daySpecies].map(([d, s]) => [d, s.size])));
+  // A year of only spuhs has no biggest day worth naming.
+  const bigDay = topDay && topDay[1] > 0 ? topDay : null;
 
   const chronological = [...lists].sort(
     (a, b) => a.date.localeCompare(b.date) || (a.startMin ?? 0) - (b.startMin ?? 0)

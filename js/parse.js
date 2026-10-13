@@ -25,6 +25,7 @@ const COLUMN_ALIASES = {
 };
 
 const REQUIRED = ['submissionId', 'commonName', 'date'];
+const COLUMN_LABELS = { submissionId: 'Submission ID', commonName: 'Common Name', date: 'Date' };
 const KM_TO_MI = 0.621371;
 
 // RFC 4180 CSV: quoted fields, escaped quotes, CRLF or LF line endings.
@@ -86,7 +87,10 @@ function mapHeaders(header) {
   const missing = REQUIRED.filter((k) => !(k in index));
   if (missing.length) {
     throw new Error(
-      "This doesn't look like an eBird data export. Missing columns: " + missing.join(', ')
+      "This doesn't look like an eBird data export. It's missing the " +
+        missing.map((k) => `"${COLUMN_LABELS[k]}"`).join(', ') +
+        (missing.length > 1 ? ' columns' : ' column') +
+        '. Use the MyEBirdData file from ebird.org/downloadMyData.'
     );
   }
   return index;

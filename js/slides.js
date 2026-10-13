@@ -30,6 +30,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
 // Long location names step down in size so they fit in two or three lines.
 const titleSize = (name) => (name.length > 34 ? ' title-long' : name.length > 22 ? ' title-mid' : '');
 
+// The unit word for a number as it's displayed (so 0.6 hours shows as "1 hour").
+const word = (n, one, many = one + 's') => (Math.round(n) === 1 ? one : many);
+
 const plural = (n, one, many = one + 's') => `${fmt(n)} ${n === 1 ? one : many}`;
 
 // Entrance animation hooks. Each marked element plays its effect once when
@@ -88,7 +91,11 @@ function flightPathSvg(lists, w, h) {
 }
 
 function coverCard(s) {
-  const counties = s.counties === 1 ? (s.lists[0]?.county ? `${s.lists[0].county} County` : '1 county') : `${s.counties} counties`;
+  // "Kent County" reads right in the US; elsewhere the county is just its name.
+  const only = s.lists[0];
+  const counties = s.counties !== 1 ? `${s.counties} counties`
+    : !only?.county ? '1 county'
+    : only.state?.startsWith('US-') ? `${only.county} County` : only.county;
   return `
   <section class="card card-cover">
     ${flightPathSvg(s.lists, CARD_W, 820)}
@@ -103,11 +110,11 @@ function coverCard(s) {
 
 function headlineCard(s) {
   const tiles = [
-    [fmt(s.checklists), 'checklists'],
-    [fmt(s.hours), 'hours afield'],
-    [fmt(s.miles), 'miles traveled'],
+    [fmt(s.checklists), word(s.checklists, 'checklist')],
+    [fmt(s.hours), `${word(s.hours, 'hour')} afield`],
+    [fmt(s.miles), `${word(s.miles, 'mile')} traveled`],
     s.firstYearOnEbird || !s.lifers.length
-      ? [fmt(s.daysAfield), 'days afield']
+      ? [fmt(s.daysAfield), `${word(s.daysAfield, 'day')} afield`]
       : [fmt(s.lifers.length), s.lifers.length === 1 ? 'lifer' : 'lifers'],
     [fmt(s.locations), s.locations === 1 ? 'location' : 'locations'],
     s.bigDay ? [fmt(s.bigDay.species), `species on ${formatDate(s.bigDay.date)}, your biggest day`] : null,
@@ -314,9 +321,9 @@ function summaryCard(s, persona) {
       ].filter(Boolean).map((h, i) => `<div${fx('rise', 350 + i * 90)}><p class="sum-label">${esc(h.label)}</p><p class="sum-value">${esc(h.value)}</p></div>`).join('')}
     </div>
     <div class="sum-stats"${fx('rise', 650)}>
-      <div><b>${fmt(s.checklists)}</b> checklists</div>
-      <div><b>${fmt(s.hours)}</b> hours</div>
-      <div><b>${fmt(s.miles)}</b> miles</div>
+      <div><b>${fmt(s.checklists)}</b> ${word(s.checklists, 'checklist')}</div>
+      <div><b>${fmt(s.hours)}</b> ${word(s.hours, 'hour')}</div>
+      <div><b>${fmt(s.miles)}</b> ${word(s.miles, 'mile')}</div>
     </div>
     ${footer(s.year)}
   </section>`;
@@ -333,7 +340,7 @@ export function buildCards(stats, persona, places) {
     s.topSpeciesList.length && topBirdsCard(s),
     s.seenOnce.length && s.checklists >= 10 && seenOnceCard(s),
     monthsCard(s),
-    s.grind && grindCard(s),
+    s.grind && s.checklists >= 10 && grindCard(s),
     personaCard(s, persona),
     places && mapCardHtml(s, places),
     summaryCard(s, persona),

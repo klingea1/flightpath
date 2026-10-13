@@ -36,7 +36,7 @@ test('speciesKey drops spuhs, slashes, hybrids, domestics and merges subspecies 
 });
 
 test('missing columns give a friendly error', () => {
-  assert.throws(() => parseEbirdExport('foo,bar\n1,2'), /eBird data export/);
+  assert.throws(() => parseEbirdExport('foo,bar\n1,2'), /eBird data export.*"Submission ID"/);
 });
 
 test('km distances convert to miles; X counts parse as null', () => {
