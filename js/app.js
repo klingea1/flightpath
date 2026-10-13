@@ -34,6 +34,8 @@ function load(text) {
   $('upload').hidden = true;
   $('deck').hidden = false;
   render();
+  // Focus lands on Next, so keyboard users can start paging right away.
+  $('next').focus();
 }
 
 // ?persona=<id> previews a specific persona card, for design work.
@@ -55,6 +57,7 @@ function render() {
   state.cards = [...$('stage').querySelectorAll('.card-frame')];
   $('progress').innerHTML = state.cards.map(() => '<span></span>').join('');
   state.index = 0;
+  $('deck-title').textContent = `Your ${state.year} Flight Path`;
   show();
   fit();
 }
@@ -120,10 +123,32 @@ function show(direction = null) {
   enter(state.cards[state.index], direction);
   state.cards[state.index].mapCtl?.refresh();
   [...$('progress').children].forEach((b, i) => b.classList.toggle('done', i <= state.index));
+  // A focused button that becomes disabled would drop keyboard focus.
+  const focused = document.activeElement;
   $('prev').disabled = state.index === 0;
   $('next').disabled = state.index === state.cards.length - 1;
+  if (focused?.disabled) $('share').focus();
   mountActiveMap();
   updateReplay();
+  announce();
+}
+
+// Tells screen readers which card is showing and what it says, using each
+// number's final value rather than one caught mid count-up.
+function announce() {
+  const card = state.cards[state.index].querySelector('.card');
+  let text = card.dataset.announce;
+  if (!text) {
+    const copy = card.cloneNode(true);
+    for (const el of copy.querySelectorAll('[data-final]')) el.textContent = el.dataset.final;
+    for (const el of copy.querySelectorAll('[aria-hidden="true"], .card-foot')) el.remove();
+    // Join text pieces with spaces: tiles and lines are separate boxes.
+    const parts = [];
+    const walker = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) parts.push(walker.currentNode.textContent);
+    text = parts.join(' ');
+  }
+  $('announce').textContent = `Card ${state.index + 1} of ${state.cards.length}. ${text.replace(/\s+/g, ' ').trim()}`;
 }
 
 // The map loads its outlines the first time its card is shown, then plays.
@@ -307,6 +332,7 @@ $('back').addEventListener('click', () => {
   $('deck').hidden = true;
   $('upload').hidden = false;
   $('file').value = '';
+  $('drop').focus();
 });
 $('year').addEventListener('change', (e) => { state.year = Number(e.target.value); render(); });
 $('prev').addEventListener('click', () => go(-1));
