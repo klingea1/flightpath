@@ -1,0 +1,20 @@
+# Runs the test suite on every pull request to main, and on main itself,
+# so a change that breaks a card shows up as a red X before it goes live.
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The site and tests have no runtime dependencies, so no install step.
+      - run: node --test
