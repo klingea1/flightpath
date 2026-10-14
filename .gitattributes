@@ -1,0 +1,20 @@
+# Normalize line endings: LF in the repo and working tree, regardless of core.autocrlf.
+# The zip fixtures hold LF CSVs, so test/fixtures/small.csv must stay LF to match them.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
