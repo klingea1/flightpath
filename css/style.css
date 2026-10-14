@@ -353,7 +353,7 @@ code {
 }
 .rank-list .rank { font-family: var(--display); font-weight: 800; }
 .rank-list .rank-name { font-weight: 500; }
-.rank-list .rank-n { font-size: 30px; opacity: 0.75; }
+.rank-list .rank-n { font-size: 30px; opacity: 0.8; }
 
 /* Months */
 
@@ -547,3 +547,80 @@ code {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Spring arrivals */
+
+.card-arrivals { background: #e4f0e6; color: #14301f; justify-content: center; padding-bottom: 150px; }
+.card-arrivals .eyebrow { color: #2a6a3f; }
+.card-arrivals .card-foot { color: #14301f; }
+.arrival-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 14px; }
+.arrival-list li {
+  display: grid;
+  grid-template-columns: 1fr auto 230px;
+  align-items: baseline;
+  gap: 20px;
+  padding: 22px 28px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 2px 0 #c9dccd;
+}
+.arr-name { font-size: 38px; font-weight: 500; }
+.arr-date { font-family: var(--display); font-weight: 600; font-size: 36px; }
+.arr-shift { font-size: 28px; font-weight: 700; text-align: right; color: #4a5a4f; }
+.arr-shift.early { color: #1d6b3f; }
+.arr-shift.late { color: #8a4f12; }
+
+/* Welcome back */
+
+.card-welcome { background: linear-gradient(165deg, #10303a 0%, #1d5260 100%); justify-content: center; padding-bottom: 150px; }
+.card-welcome .eyebrow { color: #9fe3d0; }
+.welcome-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+.welcome-list li { display: flex; flex-direction: column; padding: 16px 0; border-bottom: 2px solid rgba(255, 255, 255, 0.14); }
+.wb-name { font-size: 42px; font-weight: 500; }
+.wb-since { font-size: 30px; color: #b9e6da; margin-top: 4px; }
+
+/* Your birding day */
+
+.card-clock { background: linear-gradient(180deg, #121a33 0%, #1d3558 100%); }
+.card-clock .eyebrow { color: #ffc979; }
+.card-clock .card-sub { margin-bottom: 10px; }
+.clock-chart { align-self: center; margin-top: 36px; overflow: visible; }
+.c-face { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.12); stroke-width: 2; }
+.c-hub { fill: #121a33; }
+.c-bar { fill: #8fa6d6; }
+.c-bar.peak { fill: #ffc979; }
+.c-tick { font: 700 26px var(--sans); fill: #c3cde6; text-anchor: middle; letter-spacing: 0.06em; }
+.c-peak { font: 800 40px var(--display); fill: #ffc979; text-anchor: middle; }
+.c-center { font: 800 72px var(--display); fill: var(--ink); text-anchor: middle; }
+.c-center-label { font: 500 28px var(--sans); fill: #c3cde6; text-anchor: middle; }
+
+.card.play [data-fx="sweep"],
+.card.play [data-fx="sweep-peak"] {
+  animation-name: fx-sweep;
+  animation-duration: 520ms;
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+/* The busiest hour grows in like the rest, then lights up. */
+.card.play [data-fx="sweep-peak"] {
+  animation-name: fx-sweep, fx-peak-glow;
+  animation-duration: 520ms, 450ms;
+  animation-delay: var(--d, 0ms), 1300ms;
+}
+@keyframes fx-sweep { from { opacity: 0; transform: scale(0.35); } }
+@keyframes fx-peak-glow { from { fill: #8fa6d6; } }
+
+/* Share all, shown on the last card. */
+.share-all-row { display: flex; justify-content: center; }
+#share-all {
+  background: var(--accent);
+  color: #241a10;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  animation: fx-fade 400ms ease-out;
+}
+/* A card captured while it isn't showing is laid out off-screen. */
+.card-frame.offstage { display: block; left: -20000px; }
