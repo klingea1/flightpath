@@ -215,3 +215,53 @@ test('exports without party size never trigger the party personas', () => {
   assert.equal(s.shares.observersKnown, 0);
   assert.ok(!['lone', 'flock'].includes(pickPersona(s).id));
 });
+
+// One checklist per line: [id, date, state, species...]
+function lists(specs) {
+  const out = [];
+  for (const [id, date, state, ...sp] of specs) {
+    for (const name of sp) out.push(`${id},${name},x,1,1,${state},C,L${id},Spot,42.9,-85.6,${date},07:00 AM,Stationary,30,1,`);
+  }
+  return parseEbirdExport(csv(out));
+}
+
+test('arrivals compare home-state first dates and ignore trips and residents', () => {
+  const rows = lists([
+    ['W1', '2025-01-10', 'US-MI', 'Blue Jay'],
+    ['A1', '2025-04-30', 'US-MI', 'Gray Catbird', 'Blue Jay'],
+    ['W2', '2026-01-12', 'US-MI', 'Blue Jay'],
+    ['T1', '2026-03-05', 'US-FL', 'Gray Catbird'],
+    ['A2', '2024-04-28', 'US-MI', 'Gray Catbird'],
+    ['A3', '2026-04-27', 'US-MI', 'Gray Catbird', 'Blue Jay'],
+    ['A4', '2026-05-02', 'US-MI', 'Gray Catbird'],
+  ]);
+  const s = computeYear(rows, 2026);
+  assert.equal(s.arrivals.length, 1);
+  assert.deepEqual(s.arrivals[0], { name: 'Gray Catbird', date: '2026-04-27', lastYear: '2025-04-30', shift: -3 });
+  assert.equal(s.homeRegionName, 'Michigan');
+});
+
+test('arrivals need winter checklists both years', () => {
+  const rows = lists([
+    ['A1', '2025-04-30', 'US-MI', 'Gray Catbird'],
+    ['W2', '2026-01-12', 'US-MI', 'Blue Jay'],
+    ['A3', '2026-04-27', 'US-MI', 'Gray Catbird'],
+    ['A4', '2026-05-02', 'US-MI', 'Gray Catbird'],
+  ]);
+  assert.deepEqual(computeYear(rows, 2026).arrivals, []);
+});
+
+test('welcome back lists species missed for at least a full year, oldest first', () => {
+  const rows = lists([
+    ['O1', '2022-06-01', 'US-MI', 'Snowy Owl', 'Blue Jay'],
+    ['O2', '2023-02-01', 'US-MI', 'Red Crossbill'],
+    ['O3', '2025-03-01', 'US-MI', 'Blue Jay', 'Merlin'],
+    ['N1', '2026-02-03', 'US-MI', 'Red Crossbill', 'Merlin', 'Blue Jay'],
+    ['N2', '2026-12-20', 'US-MI', 'Snowy Owl'],
+  ]);
+  const wb = computeYear(rows, 2026).welcomeBack;
+  assert.deepEqual(wb, [
+    { name: 'Snowy Owl', date: '2026-12-20', since: '2022-06-01' },
+    { name: 'Red Crossbill', date: '2026-02-03', since: '2023-02-01' },
+  ]);
+});

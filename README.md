@@ -16,7 +16,8 @@ there is no server, account, or database.
    image: click it, then paste into Discord. A download button is always
    there too. Cards are 1080x1350 (4:5), which displays well inline in
    Discord. Each card's image is made in the background once it's on
-   screen, so sharing is instant.
+   screen, so sharing is instant. The last card adds Share all, which sends
+   every card at once (or downloads them all on desktop).
 
 ## Cards so far
 
@@ -27,18 +28,26 @@ there is no server, account, or database.
    day's totals. The export doesn't record which bird came first, so this is
    the checklist, not the bird.
 4. **Lifers**: new species in the order you found them. Skipped if there were none.
-5. **Top spot**: your most-visited location and any species you found only there.
-6. **Top birds**: top five species by how many of your checklists they appeared on.
+5. **Welcome back**: up to five species seen again after missing at least one
+   whole calendar year, oldest absence first. Needs at least two.
+6. **Top spot**: your most-visited location and any species you found only there.
+7. **Top birds**: top five species by how many of your checklists they appeared on.
    When #1 is a Kent County staple, the card admits it.
-7. **Seen exactly once**: birds that showed up on a single checklist all year.
-8. **Months**: checklists per month, with your busiest month called out.
-9. **Grind**: your slowest complete checklist of an hour or more, by minutes per species.
-10. **Persona**: one of a set of birding personas, with the three stats that
+8. **Seen exactly once**: birds that showed up on a single checklist all year.
+9. **Months**: checklists per month, with your busiest month called out.
+10. **Spring arrivals**: first-of-year dates for returning migrants in your
+   home state, against last year's. Only species first seen between March
+   and June both years count, and only if you birded at home before March
+   both years, so residents and trips stay out. Needs at least three.
+11. **Clock**: a 24-hour dial of when your checklists started, with your peak
+   hour called out. Needs ten checklists with start times.
+12. **Grind**: your slowest complete checklist of an hour or more, by minutes per species.
+13. **Persona**: one of a set of birding personas, with the three stats that
    back it up. Two personas come from party size (the export's "Number of
    Observers"): Lone Wanderer and Field Trip Regular. Logic is in `js/persona.js`. Thresholds are first guesses to
    tune against real exports. Add `?persona=<id>` to the URL to preview any
    persona's card (for example, `?persona=lakeshore`).
-11. **Map**: every place you birded, on an outline map with no streets. Pins
+14. **Map**: every place you birded, on an outline map with no streets. Pins
    are snapped to a grid of about 2 km so nobody's yard is identifiable, and
    repeat visits grow a pin instead of adding one. Out-of-state travel is
    named, and when it zooms the map far out, an inset shows home. The map
@@ -50,7 +59,7 @@ there is no server, account, or database.
    seconds, however much someone traveled. Tapping skips to the end,
    Replay runs it again, and sharing always captures the final frame. With
    reduced motion turned on, the card shows the final frame directly.
-12. **Summary**: the whole year on one card, the one most worth posting. Instead
+15. **Summary**: the whole year on one card, the one most worth posting. Instead
    of top birds (the same for everyone), it shows four highlights picked for
    each birder in `js/highlights.js`: their home state's year list, then the
    most impressive of growth over last year, biggest day, longest streak,

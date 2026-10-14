@@ -263,6 +263,98 @@ function grindCard(s) {
   </section>`;
 }
 
+function monthYear(iso) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+function shortDate(iso) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+// Returning migrants' first-of-year dates at home, against last year's.
+function arrivalsCard(s) {
+  const list = s.arrivals;
+  const avg = list.reduce((n, a) => n + a.shift, 0) / list.length;
+  const title = avg <= -2 ? 'They came early' : avg >= 2 ? 'Fashionably late' : 'Right on schedule';
+  const shiftText = (d) => (d === 0 ? 'same day' : `${Math.abs(d)} ${Math.abs(d) === 1 ? 'day' : 'days'} ${d < 0 ? 'earlier' : 'later'}`);
+  return `
+  <section class="card card-arrivals">
+    <p class="eyebrow">Spring arrivals</p>
+    <h2 class="card-title">${title}</h2>
+    <p class="card-sub">Your first of the year in ${esc(s.homeRegionName)}, against ${s.year - 1}</p>
+    <ul class="arrival-list">
+      ${list.map((a, i) => `<li${fx('slide', 300 + i * 110)}>
+        <span class="arr-name">${esc(a.name)}</span>
+        <span class="arr-date">${shortDate(a.date)}</span>
+        <span class="arr-shift ${a.shift < 0 ? 'early' : a.shift > 0 ? 'late' : ''}">${shiftText(a.shift)}</span>
+      </li>`).join('')}
+    </ul>
+    ${footer(s.year)}
+  </section>`;
+}
+
+// Birds seen again after missing at least a whole year.
+function welcomeBackCard(s) {
+  const list = s.welcomeBack;
+  return `
+  <section class="card card-welcome">
+    <p class="eyebrow">Welcome back</p>
+    <h2 class="card-title">${list.length === 1 ? 'An old friend returned' : `${fmt(list.length)} old friends returned`}</h2>
+    <p class="card-sub">Birds you saw again after a year or more away</p>
+    <ul class="welcome-list">
+      ${list.map((b, i) => `<li${fx('slide', 300 + i * 110)}><span class="wb-name">${esc(b.name)}</span><span class="wb-since">first since ${monthYear(b.since)}</span></li>`).join('')}
+    </ul>
+    ${footer(s.year)}
+  </section>`;
+}
+
+// When in the day you bird: checklist start times on a 24-hour dial, with
+// midnight at the top. Single color; the busiest hour gets the accent and
+// the only value label. The bars sweep in clockwise, like a clock hand.
+function clockCard(s) {
+  const hours = Array(24).fill(0);
+  for (const c of s.lists) if (c.startMin !== null && c.startMin !== undefined) hours[Math.floor(c.startMin / 60) % 24]++;
+  const timed = hours.reduce((a, b) => a + b, 0);
+  const max = Math.max(...hours);
+  const peak = hours.indexOf(max);
+  const size = 860, cx = size / 2, cy = size / 2, r0 = 150, r1 = 380;
+  const label = (h) => `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
+  const morning = hours.slice(0, 12).reduce((a, b) => a + b, 0) / timed;
+  const bars = hours.map((n, h) => {
+    if (!n) return '';
+    const len = r0 + ((r1 - r0) * n) / max;
+    const a0 = ((h + 0.12) / 24) * 2 * Math.PI - Math.PI / 2;
+    const a1 = ((h + 0.88) / 24) * 2 * Math.PI - Math.PI / 2;
+    const pt = (r, a) => `${(cx + r * Math.cos(a)).toFixed(1)} ${(cy + r * Math.sin(a)).toFixed(1)}`;
+    const d = `M${pt(r0, a0)} L${pt(len, a0)} A${len} ${len} 0 0 1 ${pt(len, a1)} L${pt(r0, a1)} A${r0} ${r0} 0 0 0 ${pt(r0, a0)} Z`;
+    return `<path class="${h === peak ? 'c-bar peak' : 'c-bar'}"${fx(h === peak ? 'sweep-peak' : 'sweep', 150 + h * 45)} d="${d}"/>`;
+  }).join('');
+  const peakAngle = ((peak + 0.5) / 24) * 2 * Math.PI - Math.PI / 2;
+  const peakR = r0 + (r1 - r0) + 34;
+  const ticks = [[0, 'Midnight'], [6, '6 AM'], [12, 'Noon'], [18, '6 PM']].map(([h, t]) => {
+    const a = (h / 24) * 2 * Math.PI - Math.PI / 2;
+    const r = r1 + 52;
+    return `<text class="c-tick" x="${(cx + r * Math.cos(a)).toFixed(1)}" y="${(cy + r * Math.sin(a) + 10).toFixed(1)}">${t}</text>`;
+  }).join('');
+  return `
+  <section class="card card-clock">
+    <p class="eyebrow">Your birding day</p>
+    <h2 class="card-title">${label(peak)} was your hour</h2>
+    <p class="card-sub">${Math.round(morning * 100)}% of your checklists started before noon</p>
+    <svg class="clock-chart" viewBox="0 0 ${size} ${size}" width="700" height="700" role="img"
+         aria-label="Checklists by starting hour: ${hours.map((n, h) => `${label(h)} ${n}`).join(', ')}">
+      <circle class="c-face" cx="${cx}" cy="${cy}" r="${r1 + 16}"/>
+      <circle class="c-hub" cx="${cx}" cy="${cy}" r="${r0 - 14}"/>
+      ${bars}
+      ${ticks}
+      <text class="c-peak"${fx('fade', 1350)} x="${(cx + peakR * Math.cos(peakAngle)).toFixed(1)}" y="${(cy + peakR * Math.sin(peakAngle) + 12).toFixed(1)}">${max}</text>
+      <text class="c-center" x="${cx}" y="${cy - 8}">${fmt(timed)}</text>
+      <text class="c-center-label" x="${cx}" y="${cy + 34}">checklists</text>
+    </svg>
+    ${footer(s.year)}
+  </section>`;
+}
+
 // Checklists per month as a single-series bar chart. One accent marks the
 // busiest month, which is also the only bar with a value label.
 function monthsCard(s) {
@@ -336,10 +428,13 @@ export function buildCards(stats, persona, places) {
     headlineCard(s),
     s.firstList && firstListCard(s),
     s.liferList.length && lifersCard(s),
+    s.welcomeBack.length >= 2 && welcomeBackCard(s),
     s.topLocation && s.checklists > 1 && spotCard(s),
     s.topSpeciesList.length && topBirdsCard(s),
     s.seenOnce.length && s.checklists >= 10 && seenOnceCard(s),
     monthsCard(s),
+    s.arrivals.length >= 3 && arrivalsCard(s),
+    s.lists.filter((c) => c.startMin !== null && c.startMin !== undefined).length >= 10 && clockCard(s),
     s.grind && s.checklists >= 10 && grindCard(s),
     personaCard(s, persona),
     places && mapCardHtml(s, places),

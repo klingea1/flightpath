@@ -55,6 +55,7 @@ function render() {
   const html = buildCards(stats, personaFor(stats), places);
   $('stage').innerHTML = html.map((h) => `<div class="card-frame">${h}</div>`).join('');
   state.cards = [...$('stage').querySelectorAll('.card-frame')];
+  allImages = null;
   $('progress').innerHTML = state.cards.map(() => '<span></span>').join('');
   state.index = 0;
   $('deck-title').textContent = `Your ${state.year} Flight Path`;
@@ -130,6 +131,7 @@ function show(direction = null) {
   if (focused?.disabled) $('share').focus();
   mountActiveMap();
   updateReplay();
+  updateShareAll();
   announce();
 }
 
@@ -214,10 +216,17 @@ function cardImage(frame) {
     if (ctl?.running) await ctl.skip();
     const card = frame.querySelector('.card');
     settle(card);
-    // Embedding the web fonts is the slow part of a render; do it once.
-    fontCss ??= window.htmlToImage.getFontEmbedCSS(card);
-    const fontEmbedCSS = await fontCss;
-    return window.htmlToImage.toBlob(card, { width: CARD_W, height: CARD_H, pixelRatio: 1, fontEmbedCSS });
+    // A card that isn't showing is laid out off-screen while it's captured.
+    const offstage = !frame.classList.contains('active');
+    if (offstage) frame.classList.add('offstage');
+    try {
+      // Embedding the web fonts is the slow part of a render; do it once.
+      fontCss ??= window.htmlToImage.getFontEmbedCSS(card);
+      const fontEmbedCSS = await fontCss;
+      return await window.htmlToImage.toBlob(card, { width: CARD_W, height: CARD_H, pixelRatio: 1, fontEmbedCSS });
+    } finally {
+      if (offstage) frame.classList.remove('offstage');
+    }
   })();
   frame.png.catch(() => { frame.png = null; });
   return frame.png;
@@ -236,8 +245,67 @@ function prepareImage(frame) {
   });
 }
 
-function fileName() {
-  return `flight-path-${state.year}-${state.index + 1}.png`;
+function fileName(index = state.index) {
+  return `flight-path-${state.year}-${String(index + 1).padStart(2, '0')}.png`;
+}
+
+// Share all: offered on the last card, once the whole deck has been seen.
+// Reaching that card renders every card's image in the background, one at a
+// time, so the tap can share them all right away.
+let allImages = null;
+function prepareAll() {
+  allImages ??= (async () => {
+    const blobs = [];
+    for (const frame of state.cards) blobs.push(await cardImage(frame));
+    return blobs.map((b, i) => new File([b], fileName(i), { type: 'image/png' }));
+  })();
+  allImages.catch(() => { allImages = null; });
+  return allImages;
+}
+
+function updateShareAll() {
+  const last = state.index === state.cards.length - 1;
+  const changed = $('share-all').hidden === last;
+  $('share-all').hidden = !last;
+  // The button takes room from the stage, so the card rescales to fit.
+  if (changed) fit();
+  if (!last) return;
+  const n = state.cards.length;
+  $('share-all').textContent = shareMode === 'share' ? `Share all ${n} cards` : `Download all ${n} cards`;
+  prepareAll();
+}
+
+async function shareAll() {
+  const btn = $('share-all');
+  const label = btn.textContent;
+  try {
+    const files = await prepareAll();
+    if (shareMode === 'share' && navigator.canShare?.({ files })) {
+      await navigator.share({ files, title: `My ${state.year} Flight Path` });
+      return;
+    }
+    // Desktop: one download per card, spaced out so browsers don't drop any.
+    for (const f of files) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(f);
+      a.download = f.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    btn.textContent = 'Downloaded. Drag them into Discord';
+    setTimeout(() => { btn.textContent = label; }, 3000);
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    // The tap "expired" while images were still being made. They're ready now.
+    if (e.name === 'NotAllowedError') {
+      btn.textContent = 'Ready, tap again';
+      setTimeout(() => { btn.textContent = label; }, 3000);
+      return;
+    }
+    console.error(e);
+    alert("Sorry, the cards couldn't be shared. You can still share them one at a time.");
+  }
 }
 
 function flash(text) {
@@ -341,6 +409,7 @@ $('share').textContent = SHARE_LABEL;
 $('download').hidden = shareMode === 'download';
 $('share').addEventListener('click', shareCard);
 $('download').addEventListener('click', downloadCard);
+$('share-all').addEventListener('click', shareAll);
 $('replay').addEventListener('click', () => {
   const ctl = state.cards[state.index].mapCtl;
   if (ctl) playMap(ctl);

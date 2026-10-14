@@ -1,3 +1,5 @@
+import { regionName } from './places.js';
+
 // Turns normalized observation rows into the numbers behind each slide.
 
 // eBird names many personal locations after their coordinates, e.g.
@@ -116,6 +118,28 @@ export function computeYear(rows, year) {
   }
   const earliestEver = allLists.reduce((m, c) => (c.date < m ? c.date : m), '9999');
 
+  // History beyond this year: each species' first date this year, its last
+  // date before this year, and (for arrivals) its first date this year and
+  // last year in the home state. First-of-year only means something where
+  // you live: a Florida trip in March isn't your catbird coming back.
+  const lastYear = String(year - 1);
+  const home = regionYearList(allLists.filter((c) => c.date.startsWith(prefix)))?.code;
+  const firstThis = new Map();
+  const lastBefore = new Map();
+  const homeFirstThis = new Map();
+  const homeFirstLast = new Map();
+  for (const c of allLists) {
+    const inThis = c.date.startsWith(prefix);
+    const inLast = c.date.startsWith(lastYear);
+    const atHome = c.state === home;
+    for (const s of c.species) {
+      if (inThis && !(firstThis.get(s) <= c.date)) firstThis.set(s, c.date);
+      if (c.date < prefix && !(lastBefore.get(s) >= c.date)) lastBefore.set(s, c.date);
+      if (atHome && inThis && !(homeFirstThis.get(s) <= c.date)) homeFirstThis.set(s, c.date);
+      if (atHome && inLast && !(homeFirstLast.get(s) <= c.date)) homeFirstLast.set(s, c.date);
+    }
+  }
+
   const species = new Set();
   const speciesLists = new Map();
   const locationLists = new Map();
@@ -198,6 +222,31 @@ export function computeYear(rows, year) {
     }
   }
 
+  // Spring arrivals: first-of-year dates for returning migrants, against last
+  // year's. A species counts when its first date falls between March and June
+  // both years, which leaves out residents seen all winter. That only means
+  // something if the birder was out before March both years, so they'd have
+  // seen residents early. The most-seen species make the fairest comparison.
+  const spring = (d) => Boolean(d) && d.slice(5) >= '03-01' && d.slice(5) <= '06-30';
+  const birdedInWinter = (y) => allLists.some((c) => c.state === home && c.date.startsWith(y) && c.date.slice(5) < '03-01');
+  // Day of year on a fixed non-leap calendar, so a leap day doesn't read as a shift.
+  const dayOfYear = (d) => Math.round((Date.parse('2001-' + d.slice(5) + 'T00:00:00Z') - Date.parse('2001-01-01T00:00:00Z')) / 86400000);
+  const arrivals = birdedInWinter(prefix) && birdedInWinter(lastYear)
+    ? [...homeFirstThis]
+      .filter(([sp, d]) => spring(d) && spring(homeFirstLast.get(sp)) && speciesLists.get(sp) >= 2)
+      .sort((a, b) => speciesLists.get(b[0]) - speciesLists.get(a[0]) || a[0].localeCompare(b[0]))
+      .slice(0, 5)
+      .map(([name, date]) => ({ name, date, lastYear: homeFirstLast.get(name), shift: dayOfYear(date) - dayOfYear(homeFirstLast.get(name)) }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+
+  // Welcome back: birds seen again after missing at least one whole year.
+  const welcomeBack = [...firstThis]
+    .filter(([sp]) => lastBefore.has(sp) && Number(lastBefore.get(sp).slice(0, 4)) <= year - 2)
+    .map(([name, date]) => ({ name, date, since: lastBefore.get(name) }))
+    .sort((a, b) => a.since.localeCompare(b.since) || a.date.localeCompare(b.date))
+    .slice(0, 5);
+
   const monthly = Array(12).fill(0);
   for (const c of lists) monthly[Number(c.date.slice(5, 7)) - 1]++;
 
@@ -224,6 +273,9 @@ export function computeYear(rows, year) {
     topSpeciesList,
     monthly,
     seenOnce,
+    arrivals,
+    welcomeBack,
+    homeRegionName: home ? regionName(home) : '',
     grind,
     firstYearOnEbird: earliestEver.startsWith(prefix),
     homeRegion: regionYearList(lists),
