@@ -75,7 +75,7 @@ image is never caught mid-animation. Reduced motion turns entrances off.
 No build step. Serve the folder and open it:
 
 ```sh
-npm start          # python3 -m http.server 8000
+npm start          # node tools/serve.mjs, at http://localhost:8000/
 npm test           # node --test
 ```
 
