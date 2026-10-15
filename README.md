@@ -81,6 +81,11 @@ npm test           # node --test
 
 `npm install` is only needed to rebuild the map outlines (see `tools/build-map.mjs`). The site itself has no dependencies to install.
 
+`node tools/check-cards.mjs <outDir> [export.csv]` screenshots every card at its
+finished frame and checks each text element's contrast against the pixels
+behind it (4.5:1 minimum). It needs Chrome or Edge (set `CHROME` if it isn't
+found), serves the site itself, and exits with code 1 if any text falls short.
+
 `node tools/make-big-export.mjs <out.csv>` writes a large synthetic export
 (20 years, about 65 MB) for performance testing. It loads in about 3 seconds
 on a laptop, using about 190 MB of memory.

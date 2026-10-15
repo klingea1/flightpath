@@ -21,7 +21,7 @@ Ground rules carried over:
 
 - Never commit anyone's real eBird export. Use `samples/demo.csv`, `test/fixtures/edge/`, or `tools/make-big-export.mjs` for test data.
 - Keep it client-side with as few dependencies and outside data sources as possible.
-- After visual changes, check text contrast (4.5:1 minimum) and run axe on every card. The scripts used for this lived in the cloud session's scratch space and are gone. They were short Playwright scripts that load the deck, wait about 1.9 s per card for entrances, then run axe-core or hide text and sample the background pixels behind each element.
+- After visual changes, check text contrast (4.5:1 minimum) and run axe on every card. The contrast check is now `tools/check-cards.mjs` (screenshots every card, hides the text, and samples the pixels behind each element). The axe script from the cloud session is gone and hasn't been replaced.
 
 ## Open items
 

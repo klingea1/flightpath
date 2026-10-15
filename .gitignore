@@ -1,2 +1,4 @@
 node_modules/
 .DS_Store
+# Impeccable design critiques and live-mode state, local only
+.impeccable/
