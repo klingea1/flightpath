@@ -1,6 +1,7 @@
-// Picks the summary card's four highlights: the home-state year list, then
-// the most impressive of a few personal achievements. Like personas, each candidate scores how notable it
-// is. Modest fallbacks fill in for lighter years, so every card has four.
+// Picks the summary card's three highlights: the home-state year list, then
+// the most impressive of a few personal achievements. Like personas, each
+// candidate scores how notable it is. Modest fallbacks fill in for lighter
+// years, so every card has three.
 
 import { regionName } from './places.js';
 
@@ -40,19 +41,21 @@ export function pickHighlights(s) {
   ].filter(Boolean).sort((a, b) => b.score - a.score);
 
   const fallbacks = [
-    s.bigDay && { label: 'Biggest day', value: `${fmt(s.bigDay.species)} species` },
+    // A biggest day that equals the year's total just repeats the hero number.
+    s.bigDay && s.bigDay.species < s.species && { label: 'Biggest day', value: `${fmt(s.bigDay.species)} species` },
     { label: 'Days afield', value: fmt(s.daysAfield) },
     { label: 'Places birded', value: fmt(s.locations) },
     s.shares?.observersKnown >= 0.5 && s.shares.company > 0 && {
       label: 'Birded with company', value: `${Math.round(s.shares.company * 100)}% of checklists`,
     },
-    { label: 'Counties birded', value: fmt(s.counties) },
+    // One county reads as a shortfall, not a stat.
+    s.counties > 1 && { label: 'Counties birded', value: fmt(s.counties) },
     s.longestStreak >= 2 && { label: 'Longest streak', value: `${fmt(s.longestStreak)} days` },
   ].filter(Boolean);
 
   const picked = [lead].filter(Boolean);
   for (const h of [...notable, ...fallbacks]) {
-    if (picked.length >= 4) break;
+    if (picked.length >= 3) break;
     if (!picked.some((p) => p.label === h.label)) picked.push({ label: h.label, value: h.value });
   }
   return picked;

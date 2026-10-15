@@ -40,3 +40,51 @@ test('arrivals and welcome back cards need enough entries', () => {
   assert.match(wb, /first since Jun 2022/);
   assert.doesNotMatch(buildCards({ ...s, welcomeBack: welcomeBack.slice(0, 1) }, p, null).join(''), /card-welcome/);
 });
+
+test('a one-checklist cover says "1 checklist"', () => {
+  const s = computeYear(demo, 2026);
+  const html = buildCards({ ...s, checklists: 1 }, pickPersona(s), null)[0];
+  assert.match(html, /1 checklist &middot;/);
+});
+
+test('the Kent County quip only goes to Kent County birders', () => {
+  const s = computeYear(demo, 2026);
+  const p = pickPersona(s);
+  const top = [{ name: 'Canada Goose', checklists: 20, share: 0.5 }, { name: 'Blue Jay', checklists: 10, share: 0.25 }];
+  const kent = s.lists.map((c) => ({ ...c, state: 'US-MI', county: 'Kent' }));
+  const ottawa = s.lists.map((c) => ({ ...c, state: 'US-MI', county: 'Ottawa' }));
+  const quip = /basically everyone in Kent County/;
+  assert.match(buildCards({ ...s, lists: kent, topSpeciesList: top }, p, null).join(''), quip);
+  assert.doesNotMatch(buildCards({ ...s, lists: ottawa, topSpeciesList: top }, p, null).join(''), quip);
+  assert.doesNotMatch(buildCards({ ...s, lists: kent, checklists: 3, topSpeciesList: top }, p, null).join(''), quip);
+});
+
+test('a tie for top bird is named and shares its rank', () => {
+  const s = computeYear(demo, 2026);
+  const top = [
+    { name: 'Canada Goose', checklists: 29, share: 0.4 },
+    { name: 'Mallard', checklists: 29, share: 0.4 },
+    { name: 'Blue Jay', checklists: 12, share: 0.2 },
+  ];
+  const html = buildCards({ ...s, topSpeciesList: top }, pickPersona(s), null).join('');
+  assert.match(html, /tied with Mallard/);
+  assert.match(html, /<span class="rank">1<\/span><span class="rank-name">Mallard/);
+  assert.match(html, /<span class="rank">3<\/span><span class="rank-name">Blue Jay/);
+});
+
+test('a first year on eBird skips the lifers card', () => {
+  const s = computeYear(demo, 2026);
+  const p = pickPersona(s);
+  const lifers = [{ name: 'Snowy Owl', date: '2026-01-04' }];
+  assert.match(buildCards({ ...s, liferList: lifers, firstYearOnEbird: false }, p, null).join(''), /card-lifers/);
+  assert.doesNotMatch(buildCards({ ...s, liferList: lifers, firstYearOnEbird: true }, p, null).join(''), /card-lifers/);
+});
+
+test('the summary shows three highlights and the effort line', () => {
+  const s = computeYear(demo, 2026);
+  const cards = buildCards(s, pickPersona(s), null);
+  const summary = cards[cards.length - 1];
+  assert.match(summary, /card-summary/);
+  assert.equal(summary.match(/class="sum-label"/g).length, 3);
+  assert.match(summary, /class="sum-effort"/);
+});
