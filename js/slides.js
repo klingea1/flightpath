@@ -102,7 +102,7 @@ function coverCard(s) {
     <div class="cover-text"${fx('rise', 500)}>
       <p class="eyebrow">Your</p>
       <h2><span class="year">${s.year}</span><br>Flight Path</h2>
-      <p class="cover-sub">${fmt(s.checklists)} checklists &middot; ${esc(counties)}</p>
+      <p class="cover-sub">${plural(s.checklists, 'checklist')} &middot; ${esc(counties)}</p>
     </div>
     ${footer(s.year)}
   </section>`;
@@ -163,15 +163,14 @@ function firstListCard(s) {
 }
 
 function lifersCard(s) {
-  const firstYear = s.firstYearOnEbird;
   const list = s.liferList;
   const shown = list.slice(0, 7);
   const more = list.length - shown.length;
   return `
   <section class="card card-lifers">
-    <p class="eyebrow">${firstYear ? 'Your life list begins' : `New to your life list in ${s.year}`}</p>
+    <p class="eyebrow">New to your life list in ${s.year}</p>
     <div class="big-number"${count}>${fmt(list.length)}</div>
-    <p class="big-label"${fx('rise', 150)}>${firstYear ? 'species and counting' : list.length === 1 ? 'lifer' : 'lifers'}</p>
+    <p class="big-label"${fx('rise', 150)}>${list.length === 1 ? 'lifer' : 'lifers'}</p>
     <ul class="dated-list">
       ${shown.map((l, i) => `<li${fx('slide', 300 + i * 90)}><span>${esc(l.name)}</span><span>${formatDate(l.date)}</span></li>`).join('')}
       ${more > 0 ? `<li class="more"${fx('slide', 300 + shown.length * 90)}><span>and ${more} more</span></li>` : ''}
@@ -209,19 +208,33 @@ const KENT_STAPLES = new Set([
   'Downy Woodpecker', 'Red-bellied Woodpecker', 'Ring-billed Gull',
 ]);
 
+// The quip is a Kent County joke, so it only goes to Kent County birders with
+// enough checklists for "basically everyone" to mean something.
+function birdsInKent(s) {
+  if (s.checklists < 10) return false;
+  const kent = s.lists.filter((c) => c.state === 'US-MI' && c.county === 'Kent').length;
+  return kent / s.lists.length >= 0.5;
+}
+
 function topBirdsCard(s) {
   const [top, ...rest] = s.topSpeciesList;
+  // Competition ranking, so a tie shares its number.
+  const rank = (b) => 1 + s.topSpeciesList.filter((o) => o.checklists > b.checklists).length;
+  const tied = rest.filter((b) => b.checklists === top.checklists);
+  const tie = !tied.length ? ''
+    : tied.length === 1 ? `, tied with ${esc(tied[0].name)}`
+    : `, tied with ${tied.length} others`;
   return `
   <section class="card card-birds">
     <p class="eyebrow">Your top birds</p>
     <div class="top-one"${fx('rise', 200 + rest.length * 170)}>
       <span class="rank">No. 1</span>
       <h2 class="card-title">${esc(top.name)}</h2>
-      <p class="card-sub">On ${Math.round(top.share * 100)}% of your checklists, ${plural(top.checklists, 'list')} in all</p>
-      ${KENT_STAPLES.has(top.name) ? `<p class="quip"${fx('rise', 700 + rest.length * 170)}>Same as basically everyone in Kent County.</p>` : ''}
+      <p class="card-sub">On ${Math.round(top.share * 100)}% of your checklists, ${plural(top.checklists, 'list')} in all${tie}</p>
+      ${KENT_STAPLES.has(top.name) && birdsInKent(s) ? `<p class="quip"${fx('rise', 700 + rest.length * 170)}>Same as basically everyone in Kent County.</p>` : ''}
     </div>
     <ol class="rank-list" start="2">
-      ${rest.map((b, i) => `<li${fx('slide', 200 + (rest.length - 1 - i) * 170)}><span class="rank">${i + 2}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
+      ${rest.map((b, i) => `<li${fx('slide', 200 + (rest.length - 1 - i) * 170)}><span class="rank">${rank(b)}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
     </ol>
     ${footer(s.year)}
   </section>`;
@@ -331,7 +344,10 @@ function clockCard(s) {
   }).join('');
   const peakAngle = ((peak + 0.5) / 24) * 2 * Math.PI - Math.PI / 2;
   const peakR = r0 + (r1 - r0) + 34;
-  const ticks = [[0, 'Midnight'], [6, '6 AM'], [12, 'Noon'], [18, '6 PM']].map(([h, t]) => {
+  // A tick label next to the peak would collide with its value. The title
+  // already names the peak hour, so that tick steps aside.
+  const nearPeak = (h) => Math.min(Math.abs(peak + 0.5 - h), 24 - Math.abs(peak + 0.5 - h)) < 1.5;
+  const ticks = [[0, 'Midnight'], [6, '6 AM'], [12, 'Noon'], [18, '6 PM']].filter(([h]) => !nearPeak(h)).map(([h, t]) => {
     const a = (h / 24) * 2 * Math.PI - Math.PI / 2;
     const r = r1 + 52;
     return `<text class="c-tick" x="${(cx + r * Math.cos(a)).toFixed(1)}" y="${(cy + r * Math.sin(a) + 10).toFixed(1)}">${t}</text>`;
@@ -348,8 +364,8 @@ function clockCard(s) {
       ${bars}
       ${ticks}
       <text class="c-peak"${fx('fade', 1350)} x="${(cx + peakR * Math.cos(peakAngle)).toFixed(1)}" y="${(cy + peakR * Math.sin(peakAngle) + 12).toFixed(1)}">${max}</text>
-      <text class="c-center" x="${cx}" y="${cy - 8}">${fmt(timed)}</text>
-      <text class="c-center-label" x="${cx}" y="${cy + 34}">checklists</text>
+      <text class="c-center" x="${cx}" y="${cy - 2}">${fmt(timed)}</text>
+      <text class="c-center-label" x="${cx}" y="${cy + 50}">checklists</text>
     </svg>
     ${footer(s.year)}
   </section>`;
@@ -391,33 +407,22 @@ function monthsCard(s) {
   </section>`;
 }
 
-function summaryCard(s, persona) {
+// The ending, and the card most worth posting. It bookends the cover: the
+// same sky, now at sunrise, with the year's flight path drawn large. One big
+// number, three highlights, and the effort line where the cover's footer sits.
+function summaryCard(s) {
   return `
   <section class="card card-summary">
-    <div class="sum-head">
-      <div>
-        <p class="eyebrow">My ${s.year}</p>
-        <h2>Flight Path</h2>
-      </div>
-      ${flightPathSvg(s.lists, 380, 300).replace('class="path-art"', 'class="path-art mini"')}
+    <h2 class="sum-title">My <span class="year">${s.year}</span> Flight Path</h2>
+    ${flightPathSvg(s.lists, CARD_W, 500).replace('class="path-art"', 'class="path-art sum-art"')}
+    <div class="sum-hero"${fx('rise', 700)}>
+      <span class="sum-big"${count}>${fmt(s.species)}</span>
+      <span class="sum-big-label">species</span>
     </div>
-    <div class="sum-hero"${fx('rise', 150)}>
-      <div class="sum-big">${fmt(s.species)}</div>
-      <div class="sum-big-label">species</div>
-    </div>
-    <div class="sum-grid">
-      ${[
-        ...pickHighlights(s),
-        { label: 'Persona', value: persona.name },
-        s.topLocation && { label: 'Top spot', value: s.topLocation.name },
-      ].filter(Boolean).map((h, i) => `<div${fx('rise', 350 + i * 90)}><p class="sum-label">${esc(h.label)}</p><p class="sum-value">${esc(h.value)}</p></div>`).join('')}
-    </div>
-    <div class="sum-stats"${fx('rise', 650)}>
-      <div><b>${fmt(s.checklists)}</b> ${word(s.checklists, 'checklist')}</div>
-      <div><b>${fmt(s.hours)}</b> ${word(s.hours, 'hour')}</div>
-      <div><b>${fmt(s.miles)}</b> ${word(s.miles, 'mile')}</div>
-    </div>
-    ${footer(s.year)}
+    <ul class="sum-list">
+      ${pickHighlights(s).map((h, i) => `<li${fx('slide', 950 + i * 140)}><span class="sum-label">${esc(h.label)}</span><span class="sum-value">${esc(h.value)}</span></li>`).join('')}
+    </ul>
+    <p class="sum-effort"${fx('fade', 1400)}><b>${fmt(s.checklists)}</b> ${word(s.checklists, 'checklist')} &middot; <b>${fmt(s.hours)}</b> ${word(s.hours, 'hour')} &middot; <b>${fmt(s.miles)}</b> ${word(s.miles, 'mile')}</p>
   </section>`;
 }
 
@@ -427,7 +432,8 @@ export function buildCards(stats, persona, places) {
     coverCard(s),
     headlineCard(s),
     s.firstList && firstListCard(s),
-    s.liferList.length && lifersCard(s),
+    // In a first year every species is a lifer, which Headline already says.
+    s.liferList.length && !s.firstYearOnEbird && lifersCard(s),
     s.welcomeBack.length >= 2 && welcomeBackCard(s),
     s.topLocation && s.checklists > 1 && spotCard(s),
     s.topSpeciesList.length && topBirdsCard(s),
@@ -438,6 +444,6 @@ export function buildCards(stats, persona, places) {
     s.grind && s.checklists >= 10 && grindCard(s),
     personaCard(s, persona),
     places && mapCardHtml(s, places),
-    summaryCard(s, persona),
+    summaryCard(s),
   ].filter(Boolean);
 }

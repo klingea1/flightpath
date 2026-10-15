@@ -27,12 +27,14 @@ there is no server, account, or database.
 3. **First checklist of the year**: where, when, and what was on it, plus that
    day's totals. The export doesn't record which bird came first, so this is
    the checklist, not the bird.
-4. **Lifers**: new species in the order you found them. Skipped if there were none.
+4. **Lifers**: new species in the order you found them. Skipped if there were
+   none, and in a first year on eBird, when every species is a lifer.
 5. **Welcome back**: up to five species seen again after missing at least one
    whole calendar year, oldest absence first. Needs at least two.
 6. **Top spot**: your most-visited location and any species you found only there.
 7. **Top birds**: top five species by how many of your checklists they appeared on.
-   When #1 is a Kent County staple, the card admits it.
+   Ties share a rank. When #1 is a Kent County staple and you bird mostly in
+   Kent County (ten checklists or more), the card admits it.
 8. **Seen exactly once**: birds that showed up on a single checklist all year.
 9. **Months**: checklists per month, with your busiest month called out.
 10. **Spring arrivals**: first-of-year dates for returning migrants in your
@@ -59,12 +61,17 @@ there is no server, account, or database.
    seconds, however much someone traveled. Tapping skips to the end,
    Replay runs it again, and sharing always captures the final frame. With
    reduced motion turned on, the card shows the final frame directly.
-15. **Summary**: the whole year on one card, the one most worth posting. Instead
-   of top birds (the same for everyone), it shows four highlights picked for
+15. **Summary**: the whole year on one card, the one most worth posting. It
+   bookends the cover: the same sky at sunrise, the flight path drawn large,
+   the species total, and an effort line (checklists, hours, miles). Instead
+   of top birds (the same for everyone), it shows three highlights picked for
    each birder in `js/highlights.js`: their home state's year list, then the
    most impressive of growth over last year, biggest day, longest streak,
    lifers, and states visited, with modest fallbacks for lighter years
    (including how often they birded with company).
+
+Cards are read inline in Discord at about a third of their size, so any card
+text that carries meaning is at least 34px (about 10px on a phone).
 
 Each card animates once as it's shown (counts tick up, lists cascade, bars
 grow) and then holds still. Sharing freezes the finished card first, so the
