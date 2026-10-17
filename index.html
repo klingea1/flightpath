@@ -42,7 +42,11 @@
   <main id="deck" class="screen" hidden>
     <div class="deck-bar">
       <button id="back" class="link-button" type="button">&larr; Start over</button>
-      <label id="year-picker" hidden>Year <select id="year"></select></label>
+      <div class="deck-bar-end">
+        <span id="shared-note" hidden>Shared with you</span>
+        <label id="year-picker" hidden>Year <select id="year"></select></label>
+        <button id="share-link" class="link-button" type="button">Share deck</button>
+      </div>
     </div>
     <h1 id="deck-title" class="sr-only">Your Flight Path</h1>
     <div class="progress" id="progress" aria-hidden="true"></div>

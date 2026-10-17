@@ -7,6 +7,9 @@ import { pickHighlights } from './highlights.js';
 export const CARD_W = 1080;
 export const CARD_H = 1350;
 
+// How many entries each list card shows. A shared deck link carries only these.
+export const LIMITS = { firstSpecies: 8, lifers: 7, spotOnly: 4, seenOnce: 5 };
+
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -46,12 +49,14 @@ function footer(year) {
   return `<footer class="card-foot"><span>Flight Path</span><span>${year}</span></footer>`;
 }
 
+// Every checklist's place in date order, as [lng, lat]. Places are the map's
+// grid-snapped pins, so the drawing never carries exact coordinates.
+function flightPoints(places) {
+  return places ? places.sequence.map((v) => [places.pins[v.pin].lng, places.pins[v.pin].lat]) : [];
+}
+
 // Draws every checklist location in date order as a chain of arcs.
-function flightPathSvg(lists, w, h) {
-  const pts = lists
-    .filter((c) => c.lat !== null && c.lng !== null)
-    .sort((a, b) => (a.date + (a.startMin ?? 0)).localeCompare(b.date + (b.startMin ?? 0)))
-    .map((c) => [c.lng, c.lat]);
+function flightPathSvg(pts, w, h) {
   if (!pts.length) return '';
 
   const midLat = pts.reduce((s, p) => s + p[1], 0) / pts.length;
@@ -90,15 +95,16 @@ function flightPathSvg(lists, w, h) {
     <g class="arcs">${paths}</g><g class="dots">${dots}</g></svg>`;
 }
 
-function coverCard(s) {
+function coverCard(s, path) {
   // "Kent County" reads right in the US; elsewhere the county is just its name.
-  const only = s.lists[0];
+  const only = s.soleCounty;
   const counties = s.counties !== 1 ? `${s.counties} counties`
     : !only?.county ? '1 county'
     : only.state?.startsWith('US-') ? `${only.county} County` : only.county;
+  // The art stops above the title, so no arc crosses it.
   return `
   <section class="card card-cover">
-    ${flightPathSvg(s.lists, CARD_W, 820)}
+    ${flightPathSvg(path, CARD_W, 720)}
     <div class="cover-text"${fx('rise', 500)}>
       <p class="eyebrow">Your</p>
       <h2><span class="year">${s.year}</span><br>Flight Path</h2>
@@ -145,7 +151,7 @@ function personaCard(s, persona) {
 
 function firstListCard(s) {
   const f = s.firstList;
-  const shown = f.species.slice(0, 8);
+  const shown = f.species.slice(0, LIMITS.firstSpecies);
   const more = f.species.length - shown.length;
   const when = [formatDate(f.date), formatTime(f.startMin)].filter(Boolean).join(', ');
   return `
@@ -164,7 +170,7 @@ function firstListCard(s) {
 
 function lifersCard(s) {
   const list = s.liferList;
-  const shown = list.slice(0, 7);
+  const shown = list.slice(0, LIMITS.lifers);
   const more = list.length - shown.length;
   return `
   <section class="card card-lifers">
@@ -181,7 +187,7 @@ function lifersCard(s) {
 
 function spotCard(s) {
   const t = s.topLocation;
-  const only = t.only.slice(0, 4);
+  const only = t.only.slice(0, LIMITS.spotOnly);
   return `
   <section class="card card-spot">
     <p class="eyebrow">Your top spot</p>
@@ -211,9 +217,7 @@ const KENT_STAPLES = new Set([
 // The quip is a Kent County joke, so it only goes to Kent County birders with
 // enough checklists for "basically everyone" to mean something.
 function birdsInKent(s) {
-  if (s.checklists < 10) return false;
-  const kent = s.lists.filter((c) => c.state === 'US-MI' && c.county === 'Kent').length;
-  return kent / s.lists.length >= 0.5;
+  return s.checklists >= 10 && s.kentShare >= 0.5;
 }
 
 function topBirdsCard(s) {
@@ -248,7 +252,7 @@ export function formatDuration(min) {
 
 function seenOnceCard(s) {
   const list = s.seenOnce;
-  const shown = list.slice(0, 5);
+  const shown = list.slice(0, LIMITS.seenOnce);
   const more = list.length - shown.length;
   return `
   <section class="card card-once">
@@ -325,8 +329,7 @@ function welcomeBackCard(s) {
 // midnight at the top. Single color; the busiest hour gets the accent and
 // the only value label. The bars sweep in clockwise, like a clock hand.
 function clockCard(s) {
-  const hours = Array(24).fill(0);
-  for (const c of s.lists) if (c.startMin !== null && c.startMin !== undefined) hours[Math.floor(c.startMin / 60) % 24]++;
+  const hours = s.startHours;
   const timed = hours.reduce((a, b) => a + b, 0);
   const max = Math.max(...hours);
   const peak = hours.indexOf(max);
@@ -343,7 +346,8 @@ function clockCard(s) {
     return `<path class="${h === peak ? 'c-bar peak' : 'c-bar'}"${fx(h === peak ? 'sweep-peak' : 'sweep', 150 + h * 45)} d="${d}"/>`;
   }).join('');
   const peakAngle = ((peak + 0.5) / 24) * 2 * Math.PI - Math.PI / 2;
-  const peakR = r0 + (r1 - r0) + 34;
+  // Further out when the label sits sideways, so its width clears the bar.
+  const peakR = r1 + 34 + Math.abs(Math.cos(peakAngle)) * 34;
   // A tick label next to the peak would collide with its value. The title
   // already names the peak hour, so that tick steps aside.
   const nearPeak = (h) => Math.min(Math.abs(peak + 0.5 - h), 24 - Math.abs(peak + 0.5 - h)) < 1.5;
@@ -410,11 +414,11 @@ function monthsCard(s) {
 // The ending, and the card most worth posting. It bookends the cover: the
 // same sky, now at sunrise, with the year's flight path drawn large. One big
 // number, three highlights, and the effort line where the cover's footer sits.
-function summaryCard(s) {
+function summaryCard(s, path) {
   return `
   <section class="card card-summary">
     <h2 class="sum-title">My <span class="year">${s.year}</span> Flight Path</h2>
-    ${flightPathSvg(s.lists, CARD_W, 500).replace('class="path-art"', 'class="path-art sum-art"')}
+    ${flightPathSvg(path, CARD_W, 500).replace('class="path-art"', 'class="path-art sum-art"')}
     <div class="sum-hero"${fx('rise', 700)}>
       <span class="sum-big"${count}>${fmt(s.species)}</span>
       <span class="sum-big-label">species</span>
@@ -428,8 +432,9 @@ function summaryCard(s) {
 
 export function buildCards(stats, persona, places) {
   const s = stats;
+  const path = flightPoints(places);
   return [
-    coverCard(s),
+    coverCard(s, path),
     headlineCard(s),
     s.firstList && firstListCard(s),
     // In a first year every species is a lifer, which Headline already says.
@@ -440,10 +445,10 @@ export function buildCards(stats, persona, places) {
     s.seenOnce.length && s.checklists >= 10 && seenOnceCard(s),
     monthsCard(s),
     s.arrivals.length >= 3 && arrivalsCard(s),
-    s.lists.filter((c) => c.startMin !== null && c.startMin !== undefined).length >= 10 && clockCard(s),
+    s.startHours.reduce((a, b) => a + b, 0) >= 10 && clockCard(s),
     s.grind && s.checklists >= 10 && grindCard(s),
     personaCard(s, persona),
     places && mapCardHtml(s, places),
-    summaryCard(s),
+    summaryCard(s, path),
   ].filter(Boolean);
 }

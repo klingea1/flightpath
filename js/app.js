@@ -6,9 +6,11 @@ import { pickPersona, PERSONAS } from './persona.js';
 import { buildCards, formatDuration, CARD_W, CARD_H } from './slides.js';
 import { buildPlaces } from './places.js';
 import { mountMap } from './mapcard.js';
+import { pack, unpack, deckHash, decodeDeck, hashPayload } from './share.js';
 
 const $ = (id) => document.getElementById(id);
-const state = { rows: null, year: null, index: 0, cards: [] };
+// shared: the deck came from someone's link rather than a file.
+const state = { rows: null, year: null, index: 0, cards: [], shared: false, packed: null };
 
 $('year-label').textContent = reportYear();
 
@@ -49,16 +51,23 @@ function personaFor(stats) {
 
 function render() {
   const stats = computeYear(state.rows, state.year);
-  const places = buildPlaces(stats.lists);
+  // The deck is built from its packed form, the same one a share link
+  // carries, so a link always shows exactly the cards seen here.
+  state.packed = pack(stats, buildPlaces(stats.lists), personaFor(stats));
+  renderDeck(unpack(state.packed));
+}
+
+function renderDeck({ stats, places, persona }) {
+  state.year = stats.year;
   state.stats = stats;
   state.places = places;
-  const html = buildCards(stats, personaFor(stats), places);
+  const html = buildCards(stats, persona, places);
   $('stage').innerHTML = html.map((h) => `<div class="card-frame">${h}</div>`).join('');
   state.cards = [...$('stage').querySelectorAll('.card-frame')];
   allImages = null;
   $('progress').innerHTML = state.cards.map(() => '<span></span>').join('');
   state.index = 0;
-  $('deck-title').textContent = `Your ${state.year} Flight Path`;
+  $('deck-title').textContent = state.shared ? `A ${state.year} Flight Path, shared with you` : `Your ${state.year} Flight Path`;
   show();
   fit();
 }
@@ -396,7 +405,65 @@ $('demo').addEventListener('click', async () => {
   const res = await fetch('samples/demo.csv');
   load(await res.text());
 });
+// Share this deck: a link that rebuilds these cards. Phones get the share
+// sheet; elsewhere the link is copied.
+async function deckLink() {
+  return `${location.origin}${location.pathname}${await deckHash(state.packed)}`;
+}
+
+function flashLink(text) {
+  const btn = $('share-link');
+  btn.textContent = text;
+  clearTimeout(flashLink.timer);
+  flashLink.timer = setTimeout(() => { btn.textContent = 'Share deck'; }, 4000);
+}
+
+async function shareLink() {
+  const url = await deckLink();
+  try {
+    if (touchFirst && navigator.share) {
+      await navigator.share({ url, title: `My ${state.year} Flight Path` });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    flashLink('Link copied. Anyone with it can see these cards');
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    console.error(e);
+    flashLink("Couldn't copy the link");
+  }
+}
+
+// Opens a deck from a link's #deck=… part, if it has one.
+async function openSharedDeck() {
+  const payload = hashPayload(location.hash);
+  if (!payload) return;
+  try {
+    state.packed = await decodeDeck(payload);
+    const deck = unpack(state.packed);
+    state.shared = true;
+    $('back').innerHTML = '&larr; Make your own';
+    $('shared-note').hidden = false;
+    $('year-picker').hidden = true;
+    $('upload').hidden = true;
+    $('deck').hidden = false;
+    renderDeck(deck);
+    $('next').focus();
+  } catch (e) {
+    console.error(e);
+    showError("That deck link didn't open. It may have been cut off when it was copied. Ask for it again, or make your own below.");
+  }
+}
+
+$('share-link').addEventListener('click', shareLink);
 $('back').addEventListener('click', () => {
+  if (state.shared) {
+    // Leaving a shared deck drops the link, so a reload lands on the upload page.
+    history.replaceState(null, '', location.pathname + location.search);
+    state.shared = false;
+    $('back').innerHTML = '&larr; Start over';
+    $('shared-note').hidden = true;
+  }
   $('deck').hidden = true;
   $('upload').hidden = false;
   $('file').value = '';
@@ -427,3 +494,4 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') go(-1);
 });
 window.addEventListener('resize', fit);
+openSharedDeck();

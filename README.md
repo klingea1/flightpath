@@ -18,10 +18,14 @@ there is no server, account, or database.
    Discord. Each card's image is made in the background once it's on
    screen, so sharing is instant. The last card adds Share all, which sends
    every card at once (or downloads them all on desktop).
+4. To send the deck itself, tap Share deck. It makes a link that opens
+   the same cards, ready to tap through, for anyone you send it to. See
+   [Deck links](#deck-links).
 
 ## Cards so far
 
-1. **Cover**: every checklist location connected in date order, drawn as your flight path.
+1. **Cover**: your places connected month by month, drawn as your flight path.
+   The order within each month is drawn from a seed (see [Deck links](#deck-links)).
 2. **Headline numbers**: species, checklists, hours, miles traveled, lifers (or days
    afield in your first year on eBird), locations, and biggest day.
 3. **First checklist of the year**: where, when, and what was on it, plus that
@@ -50,8 +54,9 @@ there is no server, account, or database.
    tune against real exports. Add `?persona=<id>` to the URL to preview any
    persona's card (for example, `?persona=lakeshore`).
 14. **Map**: every place you birded, on an outline map with no streets. Pins
-   are snapped to a grid of about 2 km so nobody's yard is identifiable, and
-   repeat visits grow a pin instead of adding one. Out-of-state travel is
+   are grouped on a grid of about 10 km and placed at a fixed, seeded spot
+   inside their cell, so nobody's yard is identifiable, and repeat visits
+   grow a pin instead of adding one. Out-of-state travel is
    named, and when it zooms the map far out, an inset shows home. The map
    loads only when this card is reached.
 
@@ -110,7 +115,8 @@ on a laptop, using about 190 MB of memory.
 - `js/mapcard.js`: the map card, drawn on a canvas from bundled outlines (no map library or tile service)
 - `js/camera.js`: map projection, view fitting, and the smooth zoom-and-pan used between months
 - `js/unzip.js`: reads the CSV out of eBird's zip using the browser's built-in decompression
-- `js/app.js`: upload, navigation, and PNG export
+- `js/share.js`: packs a deck into a link and opens one
+- `js/app.js`: upload, navigation, PNG export, and deck links
 - `data/map.topo.json`: outlines for the map: Natural Earth countries (minus Antarctica) and lakes, Census state lines, Michigan counties (all public domain). Rebuild with `tools/build-map.mjs`.
 - `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards and [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for reading the map outlines
 
@@ -120,8 +126,35 @@ Cards are made to be posted publicly, so:
 
 - Coordinates are stripped from every location name. eBird often names personal
   locations after them, like "Michigan 66 (42.766, -85.074)".
-- Map pins are snapped to a ~2 km grid, on a map with no streets.
+- Map pins are grouped on a ~10 km grid and drawn at a seeded spot inside
+  their cell, on a map with no streets. The cover's flight path uses the
+  same places.
 - The page never uploads the export anywhere.
+- A deck link carries only what the cards show (see below).
+
+## Deck links
+
+Share deck makes a link like `…/flightpath/#deck=…` that rebuilds the
+same cards for whoever opens it. There's no server: the deck is compressed
+into the part after `#`, which browsers never send anywhere. GitHub Pages
+only ever sees a request for the page itself.
+
+A link holds the numbers, names, and dates on the cards, the lists cut to
+what the cards show, and places as ~10 km cells with a visit count and the
+months they were visited. It never holds the export, exact coordinates, or
+anything a card doesn't show. Links can't be taken back once sent, since
+there's nothing on a server to delete.
+
+To keep links short (about 1,000 characters for most years, under 2,000
+for a heavy one, so they fit in a Discord message), the order of visits
+isn't in the link. It's regenerated from a seed (the year and checklist
+count), along with each place's spot inside its cell. Every deck, including
+the owner's own, is built from this packed form, so a link always shows
+exactly what its owner saw.
+
+`js/share.js` holds the format. Its version number must go up when the
+packed shape changes, with old versions still readable, so links already
+posted keep working.
 
 ## Known gaps
 

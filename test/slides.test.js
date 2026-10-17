@@ -13,7 +13,7 @@ test('clock card shows the peak hour and only appears with enough timed checklis
   const cards = buildCards(s, pickPersona(s), null).join('');
   assert.match(cards, /card-clock/);
   assert.match(cards, /was your hour/);
-  const few = { ...s, lists: s.lists.slice(0, 9) };
+  const few = { ...s, startHours: [9, ...Array(23).fill(0)] };
   assert.doesNotMatch(buildCards(few, pickPersona(s), null).join(''), /card-clock/);
 });
 
@@ -51,12 +51,10 @@ test('the Kent County quip only goes to Kent County birders', () => {
   const s = computeYear(demo, 2026);
   const p = pickPersona(s);
   const top = [{ name: 'Canada Goose', checklists: 20, share: 0.5 }, { name: 'Blue Jay', checklists: 10, share: 0.25 }];
-  const kent = s.lists.map((c) => ({ ...c, state: 'US-MI', county: 'Kent' }));
-  const ottawa = s.lists.map((c) => ({ ...c, state: 'US-MI', county: 'Ottawa' }));
   const quip = /basically everyone in Kent County/;
-  assert.match(buildCards({ ...s, lists: kent, topSpeciesList: top }, p, null).join(''), quip);
-  assert.doesNotMatch(buildCards({ ...s, lists: ottawa, topSpeciesList: top }, p, null).join(''), quip);
-  assert.doesNotMatch(buildCards({ ...s, lists: kent, checklists: 3, topSpeciesList: top }, p, null).join(''), quip);
+  assert.match(buildCards({ ...s, kentShare: 1, topSpeciesList: top }, p, null).join(''), quip);
+  assert.doesNotMatch(buildCards({ ...s, kentShare: 0, topSpeciesList: top }, p, null).join(''), quip);
+  assert.doesNotMatch(buildCards({ ...s, kentShare: 1, checklists: 3, topSpeciesList: top }, p, null).join(''), quip);
 });
 
 test('a tie for top bird is named and shares its rank', () => {

@@ -23,7 +23,8 @@ Flight Path: your year of birding as shareable cards, built in the browser from 
 ## Rules
 - Never commit anyone's real eBird export. Test data: `samples/demo.csv`, `test/fixtures/edge/`, or `node tools/make-big-export.mjs <out.csv>`.
 - Keep it client-side, with as few dependencies and outside data sources as possible. The export must never leave the device.
-- Keep the privacy guarantees in the README: coordinates stripped from location names, map pins snapped to a ~2 km grid.
+- Keep the privacy guarantees in the README: coordinates stripped from location names, map pins grouped on a ~10 km grid, deck links carrying only what cards show.
+- Every deck is built from its packed form (`pack`/`unpack` in `js/share.js`), the same one a deck link carries. A new card field must go through `pack` and `unpack`, and a change to the packed shape bumps `VERSION` while keeping old links readable.
 - After visual changes, run `node tools/check-cards.mjs <outDir> [export.csv]`: it screenshots every card and fails on text under 4.5:1 against the real pixels behind it. Also check edge fixtures (e.g. `test/fixtures/edge/one-checklist.csv`). axe has no script yet; run it by hand on every card, waiting about 1.9 s per card for entrances.
 
 ## Gotchas
