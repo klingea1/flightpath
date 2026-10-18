@@ -74,8 +74,13 @@ const ws = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebugge
 await new Promise((r) => ws.addEventListener('open', r));
 let nextId = 0;
 const pending = new Map();
+// Page errors fail the run too, since a card can look fine while one part
+// of it (the map, say) silently didn't draw.
+const pageErrors = [];
 ws.addEventListener('message', (e) => {
   const m = JSON.parse(e.data);
+  if (m.method === 'Runtime.exceptionThrown') pageErrors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
+  if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') pageErrors.push(m.params.args.map((a) => a.description || a.value).join(' '));
   if (pending.has(m.id)) {
     pending.get(m.id)(m);
     pending.delete(m.id);
@@ -97,6 +102,7 @@ async function run(fn, ...args) {
 
 let failed = false;
 try {
+  await send('Runtime.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1300, height: 1700, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url });
   // Module scripts have run by the load event, so the upload handler is attached.
@@ -117,9 +123,10 @@ try {
   for (let i = 0; i < count; i++) {
     // Show card i unscaled at the top left, let it play, then freeze it.
     const box = await run(async (i, entrance, mapPlayback) => {
-      const frames = [...document.querySelectorAll('.card-frame')];
-      frames.forEach((f, j) => f.classList.toggle('active', j === i));
-      const frame = frames[i];
+      // Page with the arrow key, as a person would, so the app shows the card
+      // itself (the map only loads and plays when its card is shown).
+      if (i > 0) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      const frame = document.querySelectorAll('.card-frame')[i];
       Object.assign(frame.style, { position: 'fixed', top: '0', left: '0', transform: 'none', zIndex: 99999 });
       const card = frame.querySelector('.card');
       await new Promise((r) => setTimeout(r, card.classList.contains('card-map') ? mapPlayback : entrance));
@@ -201,6 +208,10 @@ try {
     if (low.length) failed = true;
   }
   writeFileSync(join(out, 'contrast.json'), JSON.stringify(report, null, 2));
+  if (pageErrors.length) {
+    failed = true;
+    console.log(`\nPage errors:\n${[...new Set(pageErrors)].join('\n')}`);
+  }
   console.log(`\nScreenshots and contrast.json are in ${out}`);
 } finally {
   ws.close();

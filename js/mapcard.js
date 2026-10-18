@@ -271,7 +271,7 @@ const SKIPPED = Symbol('skipped');
 // and always lands on the same final frame.
 export async function mountMap(card, places, stats) {
   const shapes = await loadShapes();
-  const visitedCounties = new Set(stats.lists.filter((c) => c.state === 'US-MI').map((c) => c.county));
+  const visitedCounties = new Set(places.pins.filter((p) => p.state === 'US-MI').map((p) => p.county));
   const ctx = makeCanvas(card.querySelector('.map-host'), 1080, 1350);
   ctx.canvas.setAttribute('role', 'img');
   ctx.canvas.setAttribute('aria-label', `Map of the ${placesText(places.pins.length)} you birded this year. ${subtitle(places)}.`);

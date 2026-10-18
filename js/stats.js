@@ -250,6 +250,10 @@ export function computeYear(rows, year) {
   const monthly = Array(12).fill(0);
   for (const c of lists) monthly[Number(c.date.slice(5, 7)) - 1]++;
 
+  // Checklists by starting hour, for the clock card.
+  const startHours = Array(24).fill(0);
+  for (const c of lists) if (c.startMin !== null && c.startMin !== undefined) startHours[Math.floor(c.startMin / 60) % 24]++;
+
   const timed = lists.filter((c) => c.startMin !== null);
   const withObservers = lists.filter((c) => c.observers >= 1);
   const share = (pred, pool = lists) => (pool.length ? pool.filter(pred).length / pool.length : 0);
@@ -272,6 +276,9 @@ export function computeYear(rows, year) {
     },
     topSpeciesList,
     monthly,
+    startHours,
+    // For the Kent County joke on the top birds card.
+    kentShare: share((c) => c.state === 'US-MI' && c.county === 'Kent'),
     seenOnce,
     arrivals,
     welcomeBack,
@@ -288,6 +295,8 @@ export function computeYear(rows, year) {
     daysAfield: daySpecies.size,
     locations: locationLists.size,
     counties: new Set(lists.map((c) => `${c.state}|${c.county}`)).size,
+    // Named on the cover when every checklist was in one county.
+    soleCounty: lists[0] ? { county: lists[0].county, state: lists[0].state } : null,
     longestStreak: longestStreak(lists.map((c) => c.date)),
     topLocation: topLoc && {
       name: locationNames.get(topLoc[0]),
