@@ -1,11 +1,10 @@
 # Status: 2026-11-24
 
 ## Where things stand
-- `main`: PRs #1–#12 merged and deployed: the egg hatch, flock, murmuration, scenes and sound, plus the phone-test polish (dramatic hatch, swallow birds, snowflakes and blossoms, evening owl with a faint silhouette, golden dawn, `?scene=` previews).
-- `feat/summary-thud` (PR open): the Summary drops in, squashes and shakes the screen, and the flock scatters from the impact before leaving in a V. Tests: 103/103; the regression scripts pass.
+- `main`: PRs #1–#13 merged and deployed, including the Summary thud (drop, squash, shake, startled flock). Before that: the egg hatch, flock, murmuration, scenes and sound, plus the phone-test polish (dramatic hatch, swallow birds, snowflakes and blossoms, evening owl with a faint silhouette, golden dawn, `?scene=` previews).
 
 ## Next step
-- The owner reviews the thud PR and decides on merging, then runs the phone test again.
+- The owner runs the phone test again: hatch, birds, scenes, owl and the Summary thud.
 
 ## Waiting on the user
 - Six CC0 MP3s for `sounds/` (see `sounds/NOTICE.md`). Until then the effects are silent.
