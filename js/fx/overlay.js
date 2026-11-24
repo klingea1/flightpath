@@ -164,6 +164,23 @@ export function createOverlay(canvas, { mode, seed }) {
     let lid = Math.min(ease(t / 0.35), ease(owl.left / 0.3));          // opening and closing
     for (const b of [1.2, 2.3]) if (Math.abs(t - b) < 0.09) lid = Math.min(lid, Math.abs(t - b) / 0.09); // blinks
     const e = owl.size, a = fade(owl.x, owl.y, 1);
+    // The owl itself, barely darker than the sky: ear tufts, round head, body.
+    // It fades in and out with the stare but ignores the blinks.
+    const there = Math.min(ease(t / 0.6), ease(owl.left / 0.5));
+    ctx.save();
+    ctx.translate(owl.x, owl.y);
+    ctx.fillStyle = `rgba(4,3,10,${0.38 * there * a})`;
+    ctx.beginPath();
+    ctx.ellipse(0, 4.6 * e, 3.3 * e, 4.8 * e, 0, 0, 7);                 // body
+    ctx.moveTo(-2.9 * e, 0.4 * e);                                         // head, with two ear tufts
+    ctx.quadraticCurveTo(-3.1 * e, -2 * e, -2.6 * e, -3.5 * e);
+    ctx.quadraticCurveTo(-1.6 * e, -2.4 * e, 0, -2.4 * e);
+    ctx.quadraticCurveTo(1.6 * e, -2.4 * e, 2.6 * e, -3.5 * e);
+    ctx.quadraticCurveTo(3.1 * e, -2 * e, 2.9 * e, 0.4 * e);
+    ctx.quadraticCurveTo(2.6 * e, 2.9 * e, 0, 3 * e);
+    ctx.quadraticCurveTo(-2.6 * e, 2.9 * e, -2.9 * e, 0.4 * e);
+    ctx.fill();
+    ctx.restore();
     for (const dx of [-1.35 * e, 1.35 * e]) {
       const x = owl.x + dx, y = owl.y;
       const glow = ctx.createRadialGradient(x, y, 0, x, y, e * 2.4);
