@@ -129,7 +129,7 @@ function headlineCard(s) {
   return `
   <section class="card card-headline">
     <p class="eyebrow">In ${s.year} you found</p>
-    <div class="big-number"${count}>${fmt(s.species)}</div>
+    <div class="big-number" data-murmur${count}>${fmt(s.species)}</div>
     <p class="big-label"${fx('rise', 150)}>species</p>
     <div class="tiles">
       ${tiles.map(([n, l], i) => `<div class="tile"${fx('pop', 300 + i * 90)}><div class="tile-n">${n}</div><div class="tile-l">${esc(l)}</div></div>`).join('')}

@@ -14,8 +14,10 @@
   <link rel="stylesheet" crossorigin="anonymous"
         href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@48,600;48,800&family=Inter:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/fx.css">
 </head>
 <body>
+  <div id="fx-sky" aria-hidden="true"><div></div><div></div></div>
   <main id="upload" class="screen">
     <div class="upload-inner">
       <p class="eyebrow">For the birders</p>
@@ -27,6 +29,19 @@
         <li>Drop that zip file below. No need to unzip it.</li>
       </ol>
 
+      <div id="egg-host" aria-hidden="true">
+        <canvas id="egg"></canvas>
+        <svg class="nest" viewBox="0 0 200 50" preserveAspectRatio="none">
+          <ellipse cx="100" cy="22" rx="92" ry="18" fill="#2e1f17"/>
+          <g fill="none" stroke-linecap="round" stroke-width="3">
+            <path d="M14 22 Q60 4 108 14 T188 20" stroke="#6b4a2f"/>
+            <path d="M10 26 Q70 40 120 30 T192 24" stroke="#7d5636"/>
+            <path d="M22 14 Q90 30 150 10 T186 28" stroke="#5a3d27"/>
+            <path d="M18 32 Q80 16 130 36 T184 16" stroke="#8a6140"/>
+            <path d="M30 10 Q100 44 170 12" stroke="#4d3322"/>
+          </g>
+        </svg>
+      </div>
       <label id="drop" class="drop" tabindex="0">
         <input id="file" type="file" accept=".zip,.csv,application/zip,text/csv" hidden>
         <strong>Drop your eBird zip here</strong>
@@ -36,6 +51,15 @@
 
       <p id="error" class="error" role="alert" hidden></p>
       <p class="privacy">Your file never leaves your device. All the math happens in this browser tab.</p>
+      <button class="link-button mute-toggle" type="button" aria-pressed="false" hidden>Sound on</button>
+    </div>
+  </main>
+
+  <main id="gate" class="screen" hidden>
+    <div class="upload-inner">
+      <p class="eyebrow">Shared with you</p>
+      <h1>A <span id="gate-year" class="hero-year"></span> Flight Path</h1>
+      <button id="gate-open" type="button"><span>Tap the egg to open it</span></button>
     </div>
   </main>
 
@@ -45,6 +69,7 @@
       <div class="deck-bar-end">
         <span id="shared-note" hidden>Shared with you</span>
         <label id="year-picker" hidden>Year <select id="year"></select></label>
+        <button class="link-button mute-toggle" type="button" aria-pressed="false" hidden>Sound on</button>
         <button id="share-link" class="link-button" type="button">Share deck</button>
       </div>
     </div>
@@ -61,6 +86,8 @@
       <button id="next" type="button" aria-label="Next card">&rarr;</button>
     </div>
   </main>
+
+  <canvas id="fx-overlay" aria-hidden="true"></canvas>
 
   <script src="vendor/html-to-image-1.11.11.js"></script>
   <script type="module" src="js/app.js"></script>

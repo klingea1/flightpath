@@ -97,6 +97,11 @@ npm test           # node --test
 finished frame and checks each text element's contrast against the pixels
 behind it (4.5:1 minimum). It needs Chrome or Edge (set `CHROME` if it isn't
 found), serves the site itself, and exits with code 1 if any text falls short.
+It runs with the page effects off (`?fx=off` and reduced motion), so drifting
+birds never land in its pixels. Add `--fx` to keep the effects on instead: it
+hatches the egg and saves a full-window screenshot of each card with its sky,
+flock and particles, for checking by eye (no contrast check). `--query=persona=dawn`
+adds a query string.
 
 `node tools/make-big-export.mjs <out.csv>` writes a large synthetic export
 (20 years, about 65 MB) for performance testing. It loads in about 3 seconds
@@ -117,8 +122,10 @@ on a laptop, using about 190 MB of memory.
 - `js/unzip.js`: reads the CSV out of eBird's zip using the browser's built-in decompression
 - `js/share.js`: packs a deck into a link and opens one
 - `js/app.js`: upload, navigation, PNG export, and deck links
+- `js/fx/`: the hatch, the flock and each card's scene (see [Hatch, flock and scenes](#hatch-flock-and-scenes)). `index.js` is the only part `app.js` uses.
+- `sounds/`: the effect sounds, CC0 MP3s; sources in `sounds/NOTICE.md`
 - `data/map.topo.json`: outlines for the map: Natural Earth countries (minus Antarctica) and lakes, Census state lines, Michigan counties (all public domain). Rebuild with `tools/build-map.mjs`.
-- `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards and [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for reading the map outlines
+- `vendor/`: [html-to-image](https://github.com/bubkoo/html-to-image) 1.11.11 (MIT) for saving cards, [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 (ISC) for reading the map outlines, and a subset of [ogl](https://github.com/oframe/ogl) 1.0.11 (Unlicense: `src/core`, `src/math`, `src/extras/Sphere.js`) for drawing the egg
 
 ## Privacy
 
@@ -155,6 +162,44 @@ exactly what its owner saw.
 `js/share.js` holds the format. Its version number must go up when the
 packed shape changes, with old versions still readable, so links already
 posted keep working.
+
+## Hatch, flock and scenes
+
+The deck opens with a moment, not just a page change. None of it is part of a
+card: effects live on the page around the cards, and a saved card image never
+contains them.
+
+- **The egg.** A speckled egg sits in a nest above the drop zone. It sways,
+  wobbles when a file is dragged over, and wobbles harder while the export is
+  read. Then it cracks along a seam drawn from the deck's seed, the cap pops
+  off, shell pieces fly, and a flock bursts out: **one bird per species seen
+  that year** (up to 600). The birds fly the cover's flight path into the
+  deck. A tap or key press skips straight to the deck.
+- **The flock** stays, drifting around the cards and away from the pointer.
+  Over a card it is faint (at most 25% opacity) so text stays readable.
+- **The murmuration.** On the Headline card the birds fly in and become the
+  species number, at its exact spot, then lift off as the real number fades
+  in. Years under 40 species ring the number instead. Saving the card mid-way
+  still gives the number: a save ends the murmuration first.
+- **Scenes.** The page's sky, particles and ambient sound follow each card,
+  from its own data (`js/fx/scenes.js`): the Clock card by peak hour (dawn
+  mist, day, golden light, or night with stars and blinking owl eyes), the
+  Months card by busiest season (snow, blossoms, haze, leaves), and some
+  personas (dawn, golden hour, fireflies, lakeshore). The cover and summary
+  skies carry on past the card's edges, and on the summary the flock leaves
+  in a V.
+- **Sound.** An egg crack, wings, wind, a dawn chorus, an owl and gulls, from
+  CC0 files in `sounds/` (a missing file is just silent). Sound starts only
+  after a drop, tap or key press, is on at a gentle volume, and has a mute
+  button the site remembers. It pauses when the tab is hidden.
+- **Shared links** open on "Tap the egg to open it". The tap hatches the egg
+  and also lets the browser play sound.
+
+Modes (`js/fx/mode.js`): `?fx=off` turns everything off and the page behaves
+exactly as before; with reduced motion turned on the egg is still and fades
+out, with no flock or particles; without WebGL the egg is painted in 2D. The
+deck link format is unchanged: everything the effects use (species count,
+start hours, months, persona) is already on the cards.
 
 ## Known gaps
 

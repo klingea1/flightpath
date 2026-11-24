@@ -1,23 +1,30 @@
-# Status: 2026-10-17
+# Status: 2026-11-24
 
 ## Where things stand
-- `main` has PRs #1–#7 merged: edge cases, accessibility, favicon, the new cards, Windows setup, Discord readability and the Summary rebuild, and the card check tool.
-- **In review: `feat/share-link` (PR #8, deck links).** "Share deck" makes a `#deck=…` link that opens the same tap-through deck for anyone, with no server. See README "Deck links" and `docs/decisions.md`.
-  - Tests: 63 pass. `tools/check-cards.mjs` is clean on the demo and a synthetic heavy year.
-  - A demo link is about 1,000 characters. A 1,000-checklist year is about 1,600, under Discord's 2,000.
-  - It also fixes `tools/check-cards.mjs`, which never mounted the map card before, so it now really checks the map and reports page errors.
+- `main`: PRs #1–#9 merged (homepage eyebrow is "For the birders").
+- **In review: `feat/hatch`**: the egg hatch, flock, Headline murmuration, per-card skies and sound. Spec and plan are in `docs/superpowers/`.
+  - All 9 plan tasks are done; the final whole-branch review is done and its Important findings are fixed and re-verified in headless Chrome.
+  - 92 tests pass. `tools/check-cards.mjs` passes on the demo (effects off). `--fx` saves full-window effect screenshots for review by eye.
+  - `main` is merged in.
 
 ## Next step
-- Have Liz (or the owner) try a link from her real export: check its length, and how her map looks at 10 km. Then merge PR #8. Merging deploys, so ask first.
+- Try the PR in a real browser and on a phone (a headless check can't judge frame rate or the egg's look). Then merge, which deploys, so ask first.
 
 ## Waiting on the user
-- Merge approval for PR #8.
-- From `HANDOFF.md`: whether Muscovy Duck (Domestic type) counts (ask Liz), and December beta testers.
+- Six CC0 MP3s for `sounds/` (see `sounds/NOTICE.md`). Until then the effects are silent.
+- From `HANDOFF.md`: Muscovy Duck counting, December beta testers.
 
 ## Open items
-- Design critique P2s not yet done: card layouts don't line up from card to card, and the cards have no shared palette. The snapshot is in `.impeccable/critique/` (local only).
-- axe has no script; run it by hand.
-- On a shared deck, card copy still says "Your …". The top bar says "Shared with you".
+- Pre-existing on `main`: the one-checklist fixture fails the card check. The Fledgling persona card's footer "2026" is 4.44:1, just under 4.5:1.
+- Deferred minors from the review:
+  - no recovery after a lost WebGL context;
+  - the flock stays off-screen after going back from the Summary;
+  - the flat egg doesn't handle resizes;
+  - the `[data-murmur]` transition isn't scoped under `.fx-on`;
+  - shard geometry leaks per hatch;
+  - `egg.reset` mid-hatch leaves a pending promise;
+  - the gate says "Tap" to keyboard users and has no mute button.
+- Design critique P2s (card alignment, shared palette) are still open. axe has no script; run it by hand.
 
 ## Left running
-- Nothing. No dev servers, and the headless browsers were closed.
+- Nothing.

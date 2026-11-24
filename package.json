@@ -8,6 +8,7 @@
     "test": "node --test"
   },
   "devDependencies": {
+    "ogl": "1.0.11",
     "topojson-client": "^3.1.0",
     "topojson-server": "^3.0.1",
     "us-atlas": "^3.0.1",

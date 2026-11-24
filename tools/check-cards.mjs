@@ -8,6 +8,12 @@
 //
 //   node tools/check-cards.mjs <outDir> [export.csv]   (default: samples/demo.csv)
 //
+// With --fx it checks the page effects instead: effects stay on, the egg
+// hatches, and after each card's entrance it saves a full-window screenshot
+// (fx-NN-<card>.png) of the card with its sky, flock and particles, for review
+// by eye. No contrast check in this mode. --query=persona=dawn adds a query
+// string, for example to see a persona's scene.
+//
 // Set CHROME to the browser's path if it isn't found.
 
 import { spawn } from 'node:child_process';
@@ -16,7 +22,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const [out, csvArg] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const FX = args.includes('--fx');
+const query = args.find((a) => a.startsWith('--query='))?.slice(8);
+const [out, csvArg] = args.filter((a) => !a.startsWith('--'));
 if (!out) {
   console.error('usage: node tools/check-cards.mjs <outDir> [export.csv]');
   process.exit(1);
@@ -104,7 +113,10 @@ let failed = false;
 try {
   await send('Runtime.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1300, height: 1700, deviceScaleFactor: 1, mobile: false });
-  await send('Page.navigate', { url });
+  // The hatch, flock and skies are page effects, not part of a card, and would
+  // land in the screenshots. Turn them off so contrast is checked on the card alone.
+  if (!FX) await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await send('Page.navigate', { url: FX ? `${url}${query ? `?${query}` : ''}` : `${url}?fx=off` });
   // Module scripts have run by the load event, so the upload handler is attached.
   await waitFor(() => run(() => document.readyState === 'complete' && Boolean(document.querySelector('input[type=file]'))), 'the upload page');
 
@@ -120,7 +132,19 @@ try {
 
   mkdirSync(out, { recursive: true });
   const report = [];
-  for (let i = 0; i < count; i++) {
+  if (FX) {
+    // Effects mode: page through as a person would and keep the whole window.
+    await sleep(2500);
+    for (let i = 0; i < count; i++) {
+      if (i > 0) await run(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })));
+      const name = await run((i) => document.querySelectorAll('.card')[i].className.split(' ')[1], i);
+      await sleep(name === 'card-map' ? MAP_PLAYBACK_MS : ENTRANCE_MS + 600);
+      const shot = await send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(join(out, `fx-${String(i + 1).padStart(2, '0')}-${name}.png`), Buffer.from(shot.data, 'base64'));
+      console.log(`${name.padEnd(16)} saved`);
+    }
+  }
+  for (let i = 0; i < (FX ? 0 : count); i++) {
     // Show card i unscaled at the top left, let it play, then freeze it.
     const box = await run(async (i, entrance, mapPlayback) => {
       // Page with the arrow key, as a person would, so the app shows the card
@@ -207,12 +231,12 @@ try {
     console.log(`${box.name.padEnd(16)} ${low.length ? low.map((l) => `${l.element} "${l.text}" ${l.ratio}:1`).join('; ') : 'ok'}`);
     if (low.length) failed = true;
   }
-  writeFileSync(join(out, 'contrast.json'), JSON.stringify(report, null, 2));
+  if (!FX) writeFileSync(join(out, 'contrast.json'), JSON.stringify(report, null, 2));
   if (pageErrors.length) {
     failed = true;
     console.log(`\nPage errors:\n${[...new Set(pageErrors)].join('\n')}`);
   }
-  console.log(`\nScreenshots and contrast.json are in ${out}`);
+  console.log(FX ? `\nEffect screenshots are in ${out}` : `\nScreenshots and contrast.json are in ${out}`);
 } finally {
   ws.close();
   browser.kill();

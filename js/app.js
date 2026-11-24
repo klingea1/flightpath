@@ -7,6 +7,7 @@ import { buildCards, formatDuration, CARD_W, CARD_H } from './slides.js';
 import { buildPlaces } from './places.js';
 import { mountMap } from './mapcard.js';
 import { pack, unpack, deckHash, decodeDeck, hashPayload } from './share.js';
+import { initEffects } from './fx/index.js';
 
 const $ = (id) => document.getElementById(id);
 // shared: the deck came from someone's link rather than a file.
@@ -32,12 +33,16 @@ function load(text) {
   $('year-picker').hidden = years.length < 2;
   state.year = defaultYear(years);
   $('year').value = state.year;
-  // Show the deck first so fit() can measure the stage.
-  $('upload').hidden = true;
-  $('deck').hidden = false;
-  render();
-  // Focus lands on Next, so keyboard users can start paging right away.
-  $('next').focus();
+  const stats = computeYear(state.rows, state.year);
+  // The egg hatches first (unless effects are off), then the deck appears.
+  fx.hatch(stats, () => {
+    // Show the deck first so fit() can measure the stage.
+    $('upload').hidden = true;
+    $('deck').hidden = false;
+    render(stats);
+    // Focus lands on Next, so keyboard users can start paging right away.
+    $('next').focus();
+  });
 }
 
 // ?persona=<id> previews a specific persona card, for design work.
@@ -49,8 +54,7 @@ function personaFor(stats) {
   return { id: p.id, name: p.name, blurb: p.blurb(stats), evidence: picked.evidence };
 }
 
-function render() {
-  const stats = computeYear(state.rows, state.year);
+function render(stats = computeYear(state.rows, state.year)) {
   // The deck is built from its packed form, the same one a share link
   // carries, so a link always shows exactly the cards seen here.
   state.packed = pack(stats, buildPlaces(stats.lists), personaFor(stats));
@@ -61,6 +65,7 @@ function renderDeck({ stats, places, persona }) {
   state.year = stats.year;
   state.stats = stats;
   state.places = places;
+  state.persona = persona;
   const html = buildCards(stats, persona, places);
   $('stage').innerHTML = html.map((h) => `<div class="card-frame">${h}</div>`).join('');
   state.cards = [...$('stage').querySelectorAll('.card-frame')];
@@ -73,6 +78,7 @@ function renderDeck({ stats, places, persona }) {
 }
 
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const fx = initEffects({ search: location.search, reduceMotion });
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
 // Counts marked numbers up from zero. Each run gets a token, so a newer run
@@ -131,6 +137,8 @@ function show(direction = null) {
   state.cards.forEach((c, i) => { if (i !== state.index && c.mapCtl?.running) c.mapCtl.skip(); });
   state.cards.forEach((c, i) => c.classList.toggle('active', i === state.index));
   enter(state.cards[state.index], direction);
+  const frame = state.cards[state.index];
+  fx.onCard(frame, frame.querySelector('.card').classList[1].replace('card-', ''), state.stats, state.persona);
   state.cards[state.index].mapCtl?.refresh();
   [...$('progress').children].forEach((b, i) => b.classList.toggle('done', i <= state.index));
   // A focused button that becomes disabled would drop keyboard focus.
@@ -224,6 +232,10 @@ function cardImage(frame) {
     const ctl = await frame.mapReady;
     if (ctl?.running) await ctl.skip();
     const card = frame.querySelector('.card');
+    // The capture copies computed styles, so the murmuration's hidden number
+    // must be back first, and must not hide again until the capture is done.
+    frame.capturing = true;
+    fx.settleForSave(frame);
     settle(card);
     // A card that isn't showing is laid out off-screen while it's captured.
     const offstage = !frame.classList.contains('active');
@@ -234,6 +246,7 @@ function cardImage(frame) {
       const fontEmbedCSS = await fontCss;
       return await window.htmlToImage.toBlob(card, { width: CARD_W, height: CARD_H, pixelRatio: 1, fontEmbedCSS });
     } finally {
+      frame.capturing = false;
       if (offstage) frame.classList.remove('offstage');
     }
   })();
@@ -369,12 +382,14 @@ async function shareCard() {
 // Big exports take a few seconds on a phone, so the drop zone says so.
 function setBusy(busy) {
   $('drop').classList.toggle('busy', busy);
+  fx.wobble(busy ? 2 : 0);
   $('drop').querySelector('strong').textContent = busy ? 'Reading your checklists\u2026' : 'Drop your eBird zip here';
   $('drop').querySelector('span').textContent = busy ? 'Big exports can take a few seconds.' : 'or tap to choose it. The CSV inside works too.';
 }
 
 async function readFile(file) {
-  if (!file) return;
+  // While the egg hatches, a second file waits its turn (drop it again after).
+  if (!file || fx.busy) return;
   showError('');
   setBusy(true);
   // Let the busy message paint before the heavy work starts.
@@ -390,18 +405,23 @@ async function readFile(file) {
   }
 }
 
-$('file').addEventListener('change', (e) => readFile(e.target.files[0]));
+$('file').addEventListener('change', (e) => { fx.unlock(); readFile(e.target.files[0]); });
 $('drop').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); }
 });
-$('drop').addEventListener('dragover', (e) => { e.preventDefault(); $('drop').classList.add('over'); });
-$('drop').addEventListener('dragleave', () => $('drop').classList.remove('over'));
+$('drop').addEventListener('dragover', (e) => { e.preventDefault(); $('drop').classList.add('over'); fx.wobble(1); });
+$('drop').addEventListener('dragleave', () => { $('drop').classList.remove('over'); fx.wobble(0); });
+$('drop').addEventListener('pointerenter', () => fx.wobble(1));
+$('drop').addEventListener('pointerleave', () => { if (!$('drop').classList.contains('busy')) fx.wobble(0); });
 $('drop').addEventListener('drop', (e) => {
   e.preventDefault();
+  fx.unlock();
   $('drop').classList.remove('over');
   readFile(e.dataTransfer.files[0]);
 });
 $('demo').addEventListener('click', async () => {
+  if (fx.busy) return;
+  fx.unlock();
   const res = await fetch('samples/demo.csv');
   load(await res.text());
 });
@@ -445,10 +465,15 @@ async function openSharedDeck() {
     $('back').innerHTML = '&larr; Make your own';
     $('shared-note').hidden = false;
     $('year-picker').hidden = true;
-    $('upload').hidden = true;
-    $('deck').hidden = false;
-    renderDeck(deck);
-    $('next').focus();
+    // With effects on, a shared deck opens on "tap the egg" first.
+    if (fx.needsGate) await fx.gate(deck.stats);
+    await fx.hatch(deck.stats, () => {
+      $('upload').hidden = true;
+      $('gate').hidden = true;
+      $('deck').hidden = false;
+      renderDeck(deck);
+      $('next').focus();
+    });
   } catch (e) {
     console.error(e);
     showError("That deck link didn't open. It may have been cut off when it was copied. Ask for it again, or make your own below.");
@@ -466,10 +491,16 @@ $('back').addEventListener('click', () => {
   }
   $('deck').hidden = true;
   $('upload').hidden = false;
+  // After the upload screen shows, so the new egg can measure its nest.
+  fx.resetForUpload();
   $('file').value = '';
   $('drop').focus();
 });
-$('year').addEventListener('change', (e) => { state.year = Number(e.target.value); render(); });
+$('year').addEventListener('change', (e) => {
+  state.year = Number(e.target.value);
+  render();
+  fx.resizeFlock(state.stats.species);
+});
 $('prev').addEventListener('click', () => go(-1));
 $('next').addEventListener('click', () => go(1));
 $('share').textContent = SHARE_LABEL;
@@ -493,5 +524,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') go(1);
   if (e.key === 'ArrowLeft') go(-1);
 });
-window.addEventListener('resize', fit);
+window.addEventListener('resize', () => { fit(); fx.onResize(); });
 openSharedDeck();
