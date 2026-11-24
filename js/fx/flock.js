@@ -9,6 +9,7 @@ const MAX_SPEED = 220;
 const POINTER = 90;       // pointer scare radius, px
 const MARGIN = 40;        // soft edge, px
 const OMEGA = 8;          // target spring: critically damped, settles in well under 1 s
+const GROUPS = 3;         // wandering centres that gather the flock into murmuration blobs
 
 function place(f, i, random, b) {
   f.x[i] = random() * b.w;
@@ -21,7 +22,7 @@ function place(f, i, random, b) {
 
 export function createFlock(n, seed, bounds) {
   const f = {
-    n, bounds: { ...bounds }, targets: null, pull: 0,
+    n, bounds: { ...bounds }, targets: null, pull: 0, time: 0,
     x: new Float32Array(n), y: new Float32Array(n), vx: new Float32Array(n), vy: new Float32Array(n),
     phase: new Float32Array(n),
   };
@@ -66,6 +67,14 @@ export function stepFlock(f, dt, { bounds, pointer }) {
   const b = f.bounds;
   const free = 1 - f.pull;
   const cells = free > 0 ? grid(f) : null;
+  f.time += dt;
+  // Each third of the flock follows its own slow Lissajous centre, so the
+  // birds gather into a few swirling blobs instead of spreading evenly.
+  const centres = [];
+  for (let k = 0; k < GROUPS; k++) {
+    const t = f.time * 0.11 + k * 2.1;
+    centres.push([b.w * (0.5 + 0.34 * Math.sin(t * 1.3 + k)), b.h * (0.5 + 0.3 * Math.sin(t * 0.9 + k * 1.7))]);
+  }
   for (let i = 0; i < f.n; i++) {
     let ax = 0, ay = 0;
     const x = f.x[i], y = f.y[i];
@@ -88,6 +97,8 @@ export function stepFlock(f, dt, { bounds, pointer }) {
         bx += (avx / count - f.vx[i]) * 1.2 + (cx / count - x) * 0.9;
         by += (avy / count - f.vy[i]) * 1.2 + (cy / count - y) * 0.9;
       }
+      const [gx0, gy0] = centres[i % GROUPS];
+      bx += (gx0 - x) * 0.35; by += (gy0 - y) * 0.35;
       if (x < MARGIN) bx += (MARGIN - x) * 12;
       if (x > b.w - MARGIN) bx -= (x - b.w + MARGIN) * 12;
       if (y < MARGIN) by += (MARGIN - y) * 12;
