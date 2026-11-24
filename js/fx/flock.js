@@ -116,7 +116,7 @@ export function stepFlock(f, dt, { bounds, pointer }) {
     }
     let vx = f.vx[i] + ax * dt, vy = f.vy[i] + ay * dt;
     const s = Math.hypot(vx, vy);
-    const max = f.pull > 0 ? MAX_SPEED * 3 : MAX_SPEED;
+    const max = f.pull > 0 ? MAX_SPEED * 6 : MAX_SPEED; // fast enough to cross the screen into a shape
     if (s > max) { vx *= max / s; vy *= max / s; }
     else if (f.pull === 0 && s < MIN_SPEED) {
       if (s === 0) { vx = MIN_SPEED; vy = 0; } else { vx *= MIN_SPEED / s; vy *= MIN_SPEED / s; }

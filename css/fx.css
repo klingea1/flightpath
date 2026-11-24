@@ -43,7 +43,7 @@
 #egg-host.fading { opacity: 0; transition: opacity 400ms ease; }
 
 /* Hatching: the upload screen stays put until the deck is revealed. */
-.fx-on .hatching .upload-inner > :not(#egg-host) { opacity: 0; transition: opacity 300ms ease; }
+.fx-on .hatching .upload-inner > :not(#egg-host):not(#gate-open) { opacity: 0; transition: opacity 300ms ease; }
 
 /* The murmuration hides the real number on screen only. The frame, not the
    card, carries the class, so a saved image can never catch it hidden. */

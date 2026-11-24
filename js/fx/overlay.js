@@ -150,7 +150,7 @@ export function createOverlay(canvas, { mode, seed }) {
       const s = Math.hypot(flock.vx[i], flock.vy[i]) || 1;
       const cx = flock.vx[i] / s, cy = flock.vy[i] / s; // heading
       const flap = Math.sin(flock.phase[i]) * 0.5 + 0.5;
-      const span = solid ? 4.5 : 3.5 + (i % 3) * 0.6;
+      const span = solid ? 6.5 : 3.5 + (i % 3) * 0.6;
       const wing = span * (0.4 + flap);
       // Chevron in the bird's frame, rotated by the heading: (u, v) → (x + u·c − v·s, y + u·s + v·c).
       const p = fade(x, y, 1) < 1 ? over : near;
