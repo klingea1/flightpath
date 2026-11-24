@@ -7,7 +7,7 @@
 - The owner runs the phone test again: hatch, birds, scenes, owl and the Summary thud.
 
 ## Waiting on the user
-- Six CC0 MP3s for `sounds/` (see `sounds/NOTICE.md`). Until then the effects are silent.
+- (Sounds are in PR `feat/sounds`: six CC0 MP3s from Freesound, credited in `sounds/NOTICE.md`.)
 - From `HANDOFF.md`: Muscovy Duck counting, December beta testers.
 
 ## Open items
