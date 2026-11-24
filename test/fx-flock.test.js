@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createFlock, setTargets, stepFlock, resizeFlock } from '../js/fx/flock.js';
+import { createFlock, setTargets, stepFlock, resizeFlock, startle } from '../js/fx/flock.js';
 import { samplePoints, ringTargets, arcTargets, useRing } from '../js/fx/targets.js';
 
 const B = { w: 400, h: 300 };
@@ -70,4 +70,24 @@ test('resizeFlock keeps the birds it has', () => {
   resizeFlock(f, 4, 5);
   assert.equal(f.n, 4);
   assert.equal(f.x[3], x0);
+});
+
+test('a thud startles every bird away from it, faster than they normally fly', () => {
+  const f = createFlock(40, 7, B);
+  startle(f, 200, 280);
+  stepFlock(f, 1 / 60, { bounds: B, pointer: null });
+  let fast = 0;
+  for (let i = 0; i < f.n; i++) {
+    const dx = f.x[i] - 200, dy = f.y[i] - 280;
+    assert.ok(f.vx[i] * dx + f.vy[i] * dy > 0, `bird ${i} flies away from the thud`);
+    if (Math.hypot(f.vx[i], f.vy[i]) > 300) fast++;
+  }
+  assert.ok(fast > f.n / 2, `${fast} of ${f.n} burst past normal speed`);
+});
+
+test('the panic wears off within about a second', () => {
+  const f = createFlock(40, 8, B);
+  startle(f, 200, 280);
+  for (let i = 0; i < 75; i++) stepFlock(f, 1 / 60, { bounds: B, pointer: null });
+  for (let i = 0; i < f.n; i++) assert.ok(Math.hypot(f.vx[i], f.vy[i]) <= 221, `bird ${i} calmed down`);
 });

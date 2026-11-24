@@ -192,8 +192,11 @@ contains them.
   fireflies, lakeshore). To preview a scene on every card, add `?scene=` with
   one of dawn, day, evening, night, winter, spring, summer, autumn, sunrise,
   dusk, fireflies or lake. The cover and summary
-  skies carry on past the card's edges, and on the summary the flock leaves
-  in a V.
+  skies carry on past the card's edges.
+- **The Summary lands with a thud.** The card drops in, squashes on impact
+  and settles, the screen shakes, and the flock scatters up and away from the
+  impact before regrouping into a V and leaving. The motion is on the stage
+  and the deck, never the card, so a saved image is never mid-squash.
 - **Sound.** An egg crack, wings, wind, a dawn chorus, an owl and gulls, from
   CC0 files in `sounds/` (a missing file is just silent). Sound starts only
   after a drop, tap or key press, is on at a gentle volume, and has a mute
