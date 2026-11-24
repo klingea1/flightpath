@@ -36,6 +36,7 @@ export function initEffects({ search, reduceMotion }) {
   let releaseTimer = 0;
   let leaveTimer = 0;
   let connectFrame = 0;
+  let zoneFrame = 0;
   let lastKind = null;
   // ?scene=night (or dawn, evening, winter, spring, …) shows that scene on every card.
   const preview = previewScene(new URLSearchParams(search).get('scene'));
@@ -105,9 +106,18 @@ export function initEffects({ search, reduceMotion }) {
     return Array.from({ length: 12 }, (_, i) => [w * (0.15 + 0.7 * (i / 11)), h * (0.35 - 0.2 * Math.sin((i / 11) * Math.PI))]);
   }
 
+  // Where a card rests on screen: measured from its frame, which never moves,
+  // because the card itself is still sliding in when it's first shown.
+  function restRect(frame) {
+    const card = frame?.querySelector('.card');
+    if (!card) return null;
+    const b = frame.getBoundingClientRect(), k = b.width / (frame.offsetWidth || 1);
+    const left = b.left + card.offsetLeft * k, top = b.top + card.offsetTop * k;
+    return { left, top, right: left + card.offsetWidth * k, bottom: top + card.offsetHeight * k };
+  }
+
   function cardRect() {
-    const card = document.querySelector('.card-frame.active .card');
-    return card ? card.getBoundingClientRect() : null;
+    return restRect(document.querySelector('.card-frame.active'));
   }
 
   // The page fades away and the egg glides to the middle of the screen and
@@ -377,7 +387,11 @@ export function initEffects({ search, reduceMotion }) {
       sky.set(scene.sky);
       overlay.setParticles(scene.particles);
       sound.ambient(scene.sound);
-      overlay.setCardRect(frame.querySelector('.card')?.getBoundingClientRect() ?? null);
+      // Where birds fade: this card at rest, and again a frame later once the
+      // layout settles (the Summary's "Download all" row moves it up).
+      overlay.setCardRect(restRect(frame));
+      cancelAnimationFrame(zoneFrame);
+      zoneFrame = requestAnimationFrame(() => { if (frame.classList.contains('active')) overlay.setCardRect(restRect(frame)); });
       if (kind !== 'summary' && overlay.flock && overlay.flock.n < birds) overlay.setFlock(birds);
       if (kind === 'headline') murmuration(frame);
       // The flock waits for the path to be drawn, then leaves. Measured a frame
