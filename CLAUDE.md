@@ -9,7 +9,7 @@ Flight Path: your year of birding as shareable cards, built in the browser from 
 
 ## Commands
 - Dev: `npm start` (serves the folder at http://localhost:8000/ via `tools/serve.mjs`)
-- Card check: `node tools/check-cards.mjs <outDir> [export.csv]` (screenshots + contrast, needs Chrome or Edge)
+- Card check: `node tools/check-cards.mjs <outDir> [export.csv]` (screenshots + contrast, needs Chrome or Edge; runs with effects off). `--fx` instead saves full-window shots with the hatch, flock and scenes on.
 - Test: `npm test` (`node --test`; CI runs it on Node 22 for PRs and pushes to `main`)
 - Install: not needed to run or test. `npm ci` only to rebuild map outlines with `tools/build-map.mjs`.
 - Deploy: merging or pushing to `main` deploys immediately. Always ask first, and go through a PR.
@@ -18,12 +18,14 @@ Flight Path: your year of birding as shareable cards, built in the browser from 
 - `README.md` documents every card, the module layout, and privacy rules. Read it before changing cards.
 - Card order and when each card appears: `buildCards` in `js/slides.js`.
 - `HANDOFF.md`: state as of 2026-10-14, open items (Muscovy Duck counting, December beta, design critique findings).
-- `vendor/` holds pinned copies of html-to-image 1.11.11 and topojson-client 3.1.0, loaded directly by the page.
+- `vendor/` holds pinned copies of html-to-image 1.11.11, topojson-client 3.1.0 and an ogl 1.0.11 subset, loaded directly by the page.
+- `js/fx/`: the egg hatch, flock, per-card skies and sound. `app.js` talks only to `js/fx/index.js`. `?fx=off` turns it all off. Sounds are CC0 MP3s in `sounds/` (see `sounds/NOTICE.md`).
 
 ## Rules
 - Never commit anyone's real eBird export. Test data: `samples/demo.csv`, `test/fixtures/edge/`, or `node tools/make-big-export.mjs <out.csv>`.
 - Keep it client-side, with as few dependencies and outside data sources as possible. The export must never leave the device.
 - Keep the privacy guarantees in the README: coordinates stripped from location names, map pins grouped on a ~10 km grid, deck links carrying only what cards show.
+- Effects never go inside `.card` (that is what gets captured). html-to-image copies computed styles, so anything that hides card content on screen must be undone before a save (`fx.settleForSave`).
 - Every deck is built from its packed form (`pack`/`unpack` in `js/share.js`), the same one a deck link carries. A new card field must go through `pack` and `unpack`, and a change to the packed shape bumps `VERSION` while keeping old links readable.
 - After visual changes, run `node tools/check-cards.mjs <outDir> [export.csv]`: it screenshots every card and fails on text under 4.5:1 against the real pixels behind it. Also check edge fixtures (e.g. `test/fixtures/edge/one-checklist.csv`). axe has no script yet; run it by hand on every card, waiting about 1.9 s per card for entrances.
 

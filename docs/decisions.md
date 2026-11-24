@@ -28,3 +28,21 @@ Append-only. One entry per decision someone might later question or reverse.
 **Why:** this guarantees a link shows exactly what its owner saw, and that a link holds nothing beyond what the cards show.
 **Rejected:** rendering the owner's deck from the full stats and packing only for links. That's simpler, but the two decks could drift apart and leak extra fields.
 **Cost if wrong:** every new card field has to go through `pack`/`unpack`, and the cards changed slightly for everyone: the cover path is seeded and pins are coarser.
+
+## 2026-11-23 · Page effects: an egg hatch, a flock and per-card scenes, with ogl and recorded sound
+
+**Decision:** the deck opens with a WebGL egg (a vendored subset of ogl 1.0.11) that hatches a flock of one bird per species; the flock and each card's particles are drawn on one Canvas 2D overlay; sound is recorded CC0 MP3s. Design: `docs/superpowers/specs/2026-11-23-hatch-and-atmosphere-design.md`.
+**Why:** the owner wanted a card-atlas-style moment of delight, "all out". ogl handles WebGL setup so the work goes into the look, and matches card-atlas. Canvas 2D for the overlay because up to 600 birds is cheap on the CPU and one renderer then serves every mode (WebGL draws only the egg). Recorded sound because synthesized birdsong sounds cartoonish.
+**Rejected:**
+- Raw WebGL: 300–500 more lines of setup to maintain.
+- 2D canvas only: no lighting or real 3D shell, not "all out". It stays as the no-WebGL fallback.
+- Synthesized sound: fine for crack and wind, poor for birdsong.
+- Filler birds so small years can spell their number: breaks "one bird per species"; small years get a ring instead.
+**Cost if wrong:** about 210 KB of vendored ogl and a new module tree to maintain; effects can slow low-end phones (a frame-time watchdog sheds particles). Turning it all off is `?fx=off`, or removing the `initEffects` call in `js/app.js`.
+
+## 2026-11-23 · Saving a card ends the murmuration first
+
+**Decision:** the Headline's number is hidden during the murmuration by a class on its `.card-frame`, and every save calls `fx.settleForSave(frame)` first, which ends the murmuration and snaps the number to full opacity with no fade running.
+**Why:** html-to-image copies each element's computed style into the image, so a class outside the card still affects the capture. Without this, a save during the murmuration (or the background render 1.8 s after the card appears) baked in a hidden or 93%-faded number.
+**Rejected:** relying on the class sitting outside `.card`: it doesn't protect computed styles.
+**Cost if wrong:** a shared image with a missing or faint species count.
