@@ -46,3 +46,16 @@ Append-only. One entry per decision someone might later question or reverse.
 **Why:** html-to-image copies each element's computed style into the image, so a class outside the card still affects the capture. Without this, a save during the murmuration (or the background render 1.8 s after the card appears) baked in a hidden or 93%-faded number.
 **Rejected:** relying on the class sitting outside `.card`: it doesn't protect computed styles.
 **Cost if wrong:** a shared image with a missing or faint species count.
+
+## 2026-11-24 · A May-peak year still gets blossoms, not snow
+
+**Decision:** the owner saw the spring particles on a May-peak Months card as "snowfall ovals". They stay spring blossoms but are redrawn as unmistakable five-petal pink blossoms. Winter peaks get real six-armed snowflakes.
+**Why:** the scene follows the busiest season, and snow in May would contradict the card it sits behind.
+**Rejected:** snowflakes for every Months card.
+**Cost if wrong:** one line in `js/fx/scenes.js` (`SEASONS.spring`) to swap.
+
+## 2026-11-24 · Owl eyes at evening, not only at night
+
+**Decision:** the evening clock scene (peak 5–8 pm) and the evening persona show blinking owl eyes and play the owl, like the night scene. The eyes sit in the widest margin round the card, or below it on phones.
+**Why:** the owner expected owls for an evening birder. Before this, only a peak hour from 8 pm to 4 am had them, so most people never saw them.
+**Cost if wrong:** evening loses its plain golden-hour calm. Revert `GOLDEN` in `js/fx/scenes.js`.
