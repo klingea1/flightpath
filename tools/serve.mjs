@@ -20,6 +20,7 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.zip': 'application/zip',
+  '.mp3': 'audio/mpeg',
 };
 
 createServer(async (req, res) => {
