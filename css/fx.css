@@ -47,7 +47,7 @@
 
 /* The murmuration hides the real number on screen only. The frame, not the
    card, carries the class, so a saved image can never catch it hidden. */
-[data-murmur] { transition: opacity 300ms ease; }
+.fx-on [data-murmur] { transition: opacity 300ms ease; }
 .card-frame.murmuring [data-murmur] { opacity: 0; }
 
 /* The shared-deck gate. */
