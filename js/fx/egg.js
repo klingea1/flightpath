@@ -129,7 +129,7 @@ function seamAttribute(geometry, seam) {
   return out;
 }
 
-export function createEgg(canvas, { seed }) {
+export function createEgg(canvas, { seed, onLost: lostCallback }) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const renderer = new Renderer({ canvas, dpr, alpha: true, antialias: true, premultipliedAlpha: false });
   const gl = renderer.gl;
@@ -169,6 +169,7 @@ export function createEgg(canvas, { seed }) {
     e.preventDefault();
     lost = true;
     if (hatch) { const r = hatch.reject; hatch = null; r(new Error('WebGL context lost')); }
+    lostCallback?.();
   };
   canvas.addEventListener('webglcontextlost', onLost);
 
@@ -190,7 +191,7 @@ export function createEgg(canvas, { seed }) {
 
   function makeShards() {
     const random = rng(seed ^ 0x51ab);
-    shards.forEach((s) => s.mesh.setParent(null));
+    dropShards();
     shards = Array.from({ length: 12 }, () => {
       const r = 0.08 + random() * 0.12;
       const geometry = new Geometry(gl, {
@@ -248,11 +249,16 @@ export function createEgg(canvas, { seed }) {
     renderer.render({ scene, camera });
   }
 
+  // Each hatch makes new shards; free the old ones' GPU buffers.
+  function dropShards() {
+    for (const s of shards) { s.mesh.setParent(null); s.mesh.geometry.remove(); }
+    shards = [];
+  }
+
   function restore() {
     uniforms.uCrack.value = 0;
     for (const m of [cap, bottom]) { m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.program.uniforms.uAlpha.value = 1; }
-    shards.forEach((s) => s.mesh.setParent(null));
-    shards = [];
+    dropShards();
   }
 
   const onResize = () => resize();
@@ -276,6 +282,8 @@ export function createEgg(canvas, { seed }) {
       sphere.attributes.seamY.data = seamAttribute(sphere, seam);
       sphere.attributes.seamY.needsUpdate = true;
       uniforms.uSeed.value = (seed % 1000) / 10;
+      // A hatch still running (the deck was already revealed by a skip) ends here.
+      hatch?.resolve();
       hatch = null;
       level = 0;
       restore();

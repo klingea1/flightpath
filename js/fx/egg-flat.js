@@ -188,6 +188,8 @@ export function createEgg(canvas, { seed, still = false }) {
       seed = s;
       seam = crackSeam(seed);
       speckle(seed);
+      // A hatch still running (the deck was already revealed by a skip) ends here.
+      hatch?.resolve();
       hatch = null;
       level = 0;
       layout();

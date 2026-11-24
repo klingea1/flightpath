@@ -39,7 +39,14 @@ export function initEffects({ search, reduceMotion }) {
     if (mode === 'full') {
       try {
         const { createEgg } = await import('./egg.js');
-        egg = createEgg($('egg'), { seed });
+        // A phone that sleeps can take the WebGL context away for good: carry on
+        // with the painted egg rather than a blank one.
+        egg = createEgg($('egg'), { seed, onLost: () => setTimeout(() => {
+          egg.dispose();
+          const fresh = $('egg').cloneNode();
+          $('egg').replaceWith(fresh);
+          egg = createFlatEgg(fresh, { seed });
+        }) });
         return;
       } catch (e) {
         console.warn('WebGL egg unavailable, using the flat one:', e);
@@ -288,6 +295,8 @@ export function initEffects({ search, reduceMotion }) {
       endMurmur();
       // The flock's flight in from the hatch mustn't cut across a new card's shape.
       if (kind !== 'cover') clearTimeout(releaseTimer);
+      // Back from the Summary's exit (or any shape): the flock flies free again.
+      overlay.release();
       const scene = sceneFor(kind, stats, persona);
       sky.set(scene.sky);
       overlay.setParticles(scene.particles);
