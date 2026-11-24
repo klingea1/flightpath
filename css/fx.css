@@ -33,11 +33,14 @@
 .sky-summer  { background: linear-gradient(180deg, #14183a 0%, #22264a 55%, #3a2f2a 100%); }
 .sky-autumn  { background: linear-gradient(180deg, #17122a 0%, #2c1a30 55%, #452423 100%); }
 
-/* The egg on the upload page. */
-#egg { display: none; }
-.fx-on #egg { display: block; width: 160px; height: 160px; margin: 0 auto 8px; }
-@media (min-width: 700px) { .fx-on #egg { width: 200px; height: 200px; } }
-.fx-on #egg.fading { opacity: 0; transition: opacity 400ms ease; }
+/* The egg on the upload page, sitting in its nest. */
+#egg-host { display: none; }
+.fx-on #egg-host { display: block; position: relative; width: 160px; height: 160px; margin: 0 auto 12px; }
+@media (min-width: 700px) { .fx-on #egg-host { width: 200px; height: 200px; } }
+/* The canvas spills well past the nest so flying shell pieces aren't clipped. */
+#egg { position: absolute; z-index: 2; left: -60%; top: -90%; width: 220%; height: 200%; pointer-events: none; }
+.nest { position: absolute; left: 8%; right: 8%; bottom: 4%; width: 84%; height: 22%; }
+#egg-host.fading { opacity: 0; transition: opacity 400ms ease; }
 
 /* Hatching: the upload screen stays put until the deck is revealed. */
 .fx-on .hatching .upload-inner > :not(#egg-host) { opacity: 0; transition: opacity 300ms ease; }
