@@ -101,6 +101,7 @@ code {
 }
 
 .privacy { color: var(--ink-soft); font-size: 0.9rem; margin-top: 24px; }
+.upload-inner .mute-toggle { margin-top: 8px; }
 
 /* Deck */
 
