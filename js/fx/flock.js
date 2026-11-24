@@ -9,7 +9,6 @@ const MAX_SPEED = 220;
 const POINTER = 90;       // pointer scare radius, px
 const MARGIN = 40;        // soft edge, px
 const OMEGA = 8;          // target spring: critically damped, settles in well under 1 s
-const PANIC_S = 1.1;      // a startle's burst of speed wears off over this long
 const GROUPS = 3;         // wandering centres that gather the flock into murmuration blobs
 
 function place(f, i, random, b) {
@@ -63,29 +62,11 @@ function grid(f) {
   return cells;
 }
 
-/**
- * Something thumps at (x, y): every bird flings itself away from it, a little
- * upward, closest ones hardest, and may fly faster than usual for a moment.
- */
-export function startle(f, x, y) {
-  f.panic = 1;
-  for (let i = 0; i < f.n; i++) {
-    let dx = f.x[i] - x, dy = f.y[i] - y;
-    const d = Math.hypot(dx, dy) || 1;
-    dx /= d; dy /= d;
-    const k = 420 + 260 * Math.exp(-d / 300) + 80 * Math.sin(i * 12.9898);
-    f.vx[i] = dx * k + f.vx[i] * 0.2;
-    f.vy[i] = (dy - 0.25) * k + f.vy[i] * 0.2;
-    if (f.vx[i] * dx + f.vy[i] * dy <= 0) { f.vx[i] = dx * k; f.vy[i] = dy * k; } // straight below: straight away
-  }
-}
-
 export function stepFlock(f, dt, { bounds, pointer }) {
   if (bounds) f.bounds = bounds;
   const b = f.bounds;
   const free = 1 - f.pull;
   const cells = free > 0 ? grid(f) : null;
-  if (f.panic) f.panic = Math.max(0, f.panic - dt / PANIC_S);
   f.time += dt;
   // Each third of the flock follows its own slow Lissajous centre, so the
   // birds gather into a few swirling blobs instead of spreading evenly.
@@ -135,8 +116,7 @@ export function stepFlock(f, dt, { bounds, pointer }) {
     }
     let vx = f.vx[i] + ax * dt, vy = f.vy[i] + ay * dt;
     const s = Math.hypot(vx, vy);
-    const panic = f.panic ?? 0;
-    const max = f.pull > 0 ? MAX_SPEED * 6 : MAX_SPEED * (1 + 2.5 * panic); // fast enough to cross the screen into a shape, or to flee
+    const max = f.pull > 0 ? MAX_SPEED * 6 : MAX_SPEED; // fast enough to cross the screen into a shape
     if (s > max) { vx *= max / s; vy *= max / s; }
     else if (f.pull === 0 && s < MIN_SPEED) {
       if (s === 0) { vx = MIN_SPEED; vy = 0; } else { vx *= MIN_SPEED / s; vy *= MIN_SPEED / s; }

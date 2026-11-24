@@ -2,7 +2,7 @@
 // Canvas 2D: up to 600 birds and ~200 particles is well within budget, and one
 // renderer serves every mode. It never takes pointer events and never reaches
 // a card image (only the .card element is captured).
-import { createFlock, setTargets, stepFlock, resizeFlock, startle } from './flock.js';
+import { createFlock, setTargets, stepFlock, resizeFlock } from './flock.js';
 import { rng } from './seed.js';
 import { traceBird, strokeSnowflake, fillBlossom } from './shapes.js';
 
@@ -11,7 +11,7 @@ const OVER_CARD = 0.25; // most any bird or particle may show over a card
 export function createOverlay(canvas, { mode, seed }) {
   if (mode === 'calm' || mode === 'off') {
     const noop = () => {};
-    return { setFlock: noop, burst: noop, startle: noop, setParticles: noop, flyTo: noop, release: noop, birdColor: noop,
+    return { setFlock: noop, burst: noop, setParticles: noop, flyTo: noop, release: noop, birdColor: noop,
       setCardRect: noop, start: noop, stop: noop, resize: noop, solid: noop, get flock() { return null; } };
   }
 
@@ -263,8 +263,6 @@ export function createOverlay(canvas, { mode, seed }) {
       }
     },
     setParticles,
-    /** A thud at (x, y): the flock scatters away from it. */
-    startle(x, y) { setTargets(flock, null); solid = false; startle(flock, x, y); },
     flyTo(points, pull = 1) { setTargets(flock, points, pull); },
     release() { setTargets(flock, null); solid = false; },
     birdColor(css) { color = css; },

@@ -12,7 +12,6 @@ import { createSound } from './sound.js';
 import { createEgg as createFlatEgg } from './egg-flat.js';
 
 const MAX_BIRDS = 600;
-const THUD_MS = 650, IMPACT_MS = 260; // the Summary's drop: it lands 40% of the way in
 const $ = (id) => document.getElementById(id);
 
 export function initEffects({ search, reduceMotion }) {
@@ -34,7 +33,6 @@ export function initEffects({ search, reduceMotion }) {
   let murmur = null; // { frame, timers }
   let hatching = false; // a hatch is running: new files and clicks wait
   let releaseTimer = 0;
-  let thudTimers = [];
   // ?scene=night (or dawn, evening, winter, spring, …) shows that scene on every card.
   const preview = previewScene(new URLSearchParams(search).get('scene'));
 
@@ -225,34 +223,6 @@ export function initEffects({ search, reduceMotion }) {
     return pts;
   }
 
-  // The Summary lands with a thud: the deck drops it in and it squashes, the
-  // screen shakes, and the flock scatters from the impact before regrouping
-  // into a V and leaving. The motion is on #stage and #deck, never the card.
-  function thud(frame) {
-    endThud();
-    const stage = frame.parentElement, deck = $('deck');
-    void stage.offsetWidth; // restart the animation if it just ran
-    stage.classList.add('thud');
-    thudTimers.push(setTimeout(() => {
-      deck.classList.add('shake');
-      const r = frame.querySelector('.card')?.getBoundingClientRect();
-      if (r) overlay.startle(r.left + r.width / 2, r.bottom);
-      sound.play('flutter');
-    }, IMPACT_MS));
-    thudTimers.push(setTimeout(() => {
-      endThud();
-      overlay.setCardRect(cardRect()); // measured mid-drop; now it has landed
-    }, THUD_MS + 60));
-    thudTimers.push(setTimeout(leave, IMPACT_MS + 750));
-  }
-
-  function endThud() {
-    thudTimers.forEach(clearTimeout);
-    thudTimers = [];
-    $('stage')?.classList.remove('thud');
-    $('deck')?.classList.remove('shake');
-  }
-
   // On the Summary the flock forms a loose V and leaves off the top.
   function leave() {
     const n = overlay.flock?.n ?? 0;
@@ -347,7 +317,6 @@ export function initEffects({ search, reduceMotion }) {
     /** The card now showing: its sky, particles, sound, and the Headline's murmuration. */
     onCard(frame, kind, stats, persona) {
       endMurmur();
-      endThud();
       // The flock's flight in from the hatch mustn't cut across a new card's shape.
       if (kind !== 'cover') clearTimeout(releaseTimer);
       // Back from the Summary's exit (or any shape): the flock flies free again.
@@ -359,10 +328,7 @@ export function initEffects({ search, reduceMotion }) {
       overlay.setCardRect(frame.querySelector('.card')?.getBoundingClientRect() ?? null);
       if (kind !== 'summary' && overlay.flock && overlay.flock.n < birds) overlay.setFlock(birds);
       if (kind === 'headline') murmuration(frame);
-      if (kind === 'summary') {
-        if (mode === 'calm') leave();
-        else thud(frame);
-      }
+      if (kind === 'summary') leave();
     },
 
     settleForSave,
@@ -383,7 +349,6 @@ export function initEffects({ search, reduceMotion }) {
 
     resetForUpload() {
       endMurmur();
-      endThud();
       clearTimeout(releaseTimer);
       sequence = null;
       hatching = false;
