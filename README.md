@@ -171,11 +171,14 @@ contains them.
 
 - **The egg.** A speckled egg sits in a nest above the drop zone. It sways,
   wobbles when a file is dragged over, and wobbles harder while the export is
-  read. Then it cracks along a seam drawn from the deck's seed, the cap pops
-  off, shell pieces fly, and a flock bursts out: **one bird per species seen
+  read. Then the page fades to a spotlight and the egg glides to the middle of
+  the screen as it grows. The chick pecks three times: each peck cracks a
+  small star, then a flake chips off and leaves a hole. A crack runs round a
+  seam drawn from the deck's seed, the cap pops off, shell pieces fly, and a
+  flock bursts out (about 3.3 s in all, timeline in `js/fx/hatch.js`): **one bird per species seen
   that year** (up to 600). The birds fly the cover's flight path into the
   deck. A tap or key press skips straight to the deck.
-- **The flock** stays, drifting around the cards and away from the pointer.
+- **The flock** (swallow-like birds: swept wings, forked tail) stays, drifting around the cards and away from the pointer.
   Over a card it is faint (at most 25% opacity) so text stays readable.
 - **The murmuration.** On the Headline card the birds fly in and become the
   species number, at its exact spot, then lift off as the real number fades
@@ -183,9 +186,12 @@ contains them.
   still gives the number: a save ends the murmuration first.
 - **Scenes.** The page's sky, particles and ambient sound follow each card,
   from its own data (`js/fx/scenes.js`): the Clock card by peak hour (dawn
-  mist, day, golden light, or night with stars and blinking owl eyes), the
-  Months card by busiest season (snow, blossoms, haze, leaves), and some
-  personas (dawn, golden hour, fireflies, lakeshore). The cover and summary
+  mist with a golden horizon, day, golden light with owl eyes, or night with
+  stars and owl eyes), the Months card by busiest season (snowflakes, cherry
+  blossoms, haze, leaves), and some personas (dawn, evening with owl eyes,
+  fireflies, lakeshore). To preview a scene on every card, add `?scene=` with
+  one of dawn, day, evening, night, winter, spring, summer, autumn, sunrise,
+  dusk, fireflies or lake. The cover and summary
   skies carry on past the card's edges, and on the summary the flock leaves
   in a V.
 - **Sound.** An egg crack, wings, wind, a dawn chorus, an owl and gulls, from

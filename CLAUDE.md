@@ -19,7 +19,7 @@ Flight Path: your year of birding as shareable cards, built in the browser from 
 - Card order and when each card appears: `buildCards` in `js/slides.js`.
 - `HANDOFF.md`: state as of 2026-10-14, open items (Muscovy Duck counting, December beta, design critique findings).
 - `vendor/` holds pinned copies of html-to-image 1.11.11, topojson-client 3.1.0 and an ogl 1.0.11 subset, loaded directly by the page.
-- `js/fx/`: the egg hatch, flock, per-card skies and sound. `app.js` talks only to `js/fx/index.js`. `?fx=off` turns it all off. Sounds are CC0 MP3s in `sounds/` (see `sounds/NOTICE.md`).
+- `js/fx/`: the egg hatch, flock, per-card skies and sound. `app.js` talks only to `js/fx/index.js`. `?fx=off` turns it all off; `?scene=<name>` previews one scene on every card (names in `previewScene`, `js/fx/scenes.js`). Sounds are CC0 MP3s in `sounds/` (see `sounds/NOTICE.md`).
 
 ## Rules
 - Never commit anyone's real eBird export. Test data: `samples/demo.csv`, `test/fixtures/edge/`, or `node tools/make-big-export.mjs <out.csv>`.
