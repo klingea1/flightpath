@@ -5,13 +5,14 @@
 import { createFlock, setTargets, stepFlock, resizeFlock } from './flock.js';
 import { rng } from './seed.js';
 import { traceBird, strokeSnowflake, fillBlossom } from './shapes.js';
+import { traceAt } from './trace.js';
 
 const OVER_CARD = 0.25; // most any bird or particle may show over a card
 
 export function createOverlay(canvas, { mode, seed }) {
   if (mode === 'calm' || mode === 'off') {
     const noop = () => {};
-    return { setFlock: noop, burst: noop, setParticles: noop, flyTo: noop, release: noop, birdColor: noop,
+    return { setFlock: noop, burst: noop, connect: noop, endConnect: noop, setParticles: noop, flyTo: noop, release: noop, birdColor: noop,
       setCardRect: noop, start: noop, stop: noop, resize: noop, solid: noop, get flock() { return null; } };
   }
 
@@ -29,6 +30,7 @@ export function createOverlay(canvas, { mode, seed }) {
   let raf = 0, last = 0;
   let slow = 0, frames = 0, spent = 0, work = 0;
   let owl = null;
+  let link = null; // { start, hops, arcs, land }: the Summary connecting its dots
 
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -201,6 +203,45 @@ export function createOverlay(canvas, { mode, seed }) {
     }
   }
 
+  // The map's pins fly onto the Summary's dots (gold pins turning into the
+  // cream dots), each a little after the last, then fade as the card's own
+  // dots appear under them. Then one bird flies the path, arc by arc, as the
+  // card draws it. All at full strength over the card: this is the moment.
+  function drawConnect(now) {
+    const t = now - link.start;
+    const { hops, land } = link;
+    if (t < land + 260) {
+      const fadeOut = Math.max(0, Math.min(1, (t - land) / 260));
+      for (let i = 0; i < hops.length; i++) {
+        const { from, to } = hops[i];
+        const delay = (i / Math.max(1, hops.length)) * land * 0.35;
+        const u0 = Math.max(0, Math.min(1, (t - delay) / (land - delay)));
+        const u = u0 < 0.5 ? 4 * u0 * u0 * u0 : 1 - Math.pow(-2 * u0 + 2, 3) / 2;
+        const lift = Math.sin(Math.PI * u) * Math.min(60, Math.hypot(to[0] - from[0], to[1] - from[1]) * 0.3);
+        const x = from[0] + (to[0] - from[0]) * u, y = from[1] + (to[1] - from[1]) * u - lift;
+        const r = from[2] + (to[2] - from[2]) * u;
+        const a = 1 - fadeOut;
+        ctx.fillStyle = `rgba(${255},${Math.round(201 + 45 * u)},${Math.round(121 + 111 * u)},${0.95 * a})`;
+        ctx.strokeStyle = `rgba(255,${Math.round(246 - 45 * u)},${Math.round(232 - 111 * u)},${a})`;
+        ctx.lineWidth = Math.max(1, r * 0.3);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+      }
+    }
+    const p = traceAt(link.arcs, t);
+    if (p) {
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 26);
+      glow.addColorStop(0, 'rgba(255,201,121,0.55)');
+      glow.addColorStop(1, 'rgba(255,201,121,0)');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, 26, 0, 7); ctx.fill();
+      const lead = new Path2D();
+      traceBird(lead, p.x, p.y, p.hx, p.hy, 11, 0.5 + 0.5 * Math.sin(now / 45));
+      ctx.fillStyle = '#fff6e8';
+      ctx.fill(lead);
+    }
+    const end = link.arcs.length ? link.arcs.at(-1).start + link.arcs.at(-1).ms : land;
+    if (t > Math.max(end, land + 260)) link = null;
+  }
+
   // All birds in two paths (clear of the card, and faded over it), so 600
   // birds cost two fills rather than 600.
   function drawBirds() {
@@ -229,6 +270,7 @@ export function createOverlay(canvas, { mode, seed }) {
     stepFlock(flock, dt, { bounds: { w, h }, pointer });
     ctx.fillStyle = color;
     drawBirds();
+    if (link) drawConnect(now);
     const cost = performance.now() - t0;
     work = work * 0.95 + cost * 0.05;
     watchdog(Math.max(cost, dt * 1000));
@@ -263,6 +305,13 @@ export function createOverlay(canvas, { mode, seed }) {
       }
     },
     setParticles,
+    /**
+     * The Summary connects the dots. hops: [{ from: [x, y, r], to: [x, y, r] }]
+     * in screen pixels, landing at land ms; arcs: for traceAt, times in ms
+     * from now.
+     */
+    connect({ hops = [], arcs = [], land = 850 }) { link = { start: performance.now(), hops, arcs, land }; },
+    endConnect() { link = null; },
     flyTo(points, pull = 1) { setTargets(flock, points, pull); },
     release() { setTargets(flock, null); solid = false; },
     birdColor(css) { color = css; },

@@ -1,10 +1,16 @@
 # Status: 2026-11-24
 
 ## Where things stand
-- `main`: PRs #1–#14 merged and deployed, including the sounds (six CC0 MP3s) and the Summary thud (drop, squash, shake, startled flock). Before that: the egg hatch, flock, murmuration, scenes and sound, plus the phone-test polish (dramatic hatch, swallow birds, snowflakes and blossoms, evening owl with a faint silhouette, golden dawn, `?scene=` previews).
+- `main`: PRs #1–#14 merged and deployed: the hatch, flock, scenes, sounds, and the Summary thud (PR #13).
+- `feat/connect-the-dots` (PR open, waiting for the owner's OK to merge):
+  - reverts the thud;
+  - the Summary connects the dots: map pins fly onto its dots, then a bird flies the path as it draws;
+  - the top-birds quip names no place;
+  - the dawn chorus plays only at dawn.
+  - Tests 106/106. Regression scripts pass. r1 is timing-flaky on a loaded machine (3 of 4 passes, also flaky without these changes).
 
 ## Next step
-- The owner runs the phone test again: hatch, birds, scenes, owl, the Summary thud and sound.
+- The owner reviews the PR, merges it, then flips through on the phone again.
 
 ## Waiting on the user
 - From `HANDOFF.md`: Muscovy Duck counting, December beta testers.

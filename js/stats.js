@@ -277,7 +277,7 @@ export function computeYear(rows, year) {
     topSpeciesList,
     monthly,
     startHours,
-    // For the Kent County joke on the top birds card.
+    // No card uses it since 2026-11-24 (the quip names no place); still packed so deck links keep their shape.
     kentShare: share((c) => c.state === 'US-MI' && c.county === 'Kent'),
     seenOnce,
     arrivals,

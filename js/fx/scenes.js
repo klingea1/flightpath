@@ -3,6 +3,7 @@
 const scene = (sky, particles = null, sound = 'wind') => ({ sky, particles, sound });
 
 const NEUTRAL = scene('neutral');
+// The dawn chorus plays only at dawn, so it stays special.
 const DAWN = scene('dawn', 'mist', 'chorus');
 // Evening: a pair of owl eyes blinks open in the margin now and then.
 const GOLDEN = scene('golden', 'eyes', 'owl');
@@ -27,7 +28,7 @@ function clockScene(startHours) {
 
 const SEASONS = {
   winter: scene('winter', 'snow'),
-  spring: scene('spring', 'blossoms', 'chorus'),
+  spring: scene('spring', 'blossoms'),
   summer: scene('summer', 'haze'),
   autumn: scene('autumn', 'leaves'),
 };
@@ -43,7 +44,7 @@ function monthsScene(monthly) {
 
 const PREVIEWS = {
   dawn: DAWN, day: scene('day'), evening: GOLDEN, night: NIGHT, ...SEASONS,
-  sunrise: scene('sunrise', null, 'chorus'), dusk: scene('dusk'), fireflies: PERSONAS.sitspot, lake: PERSONAS.lakeshore,
+  sunrise: scene('sunrise'), dusk: scene('dusk'), fireflies: PERSONAS.sitspot, lake: PERSONAS.lakeshore,
 };
 
 /** ?scene=<name> puts every card in one scene, to preview it. Unknown names: null. */
@@ -55,7 +56,7 @@ export function previewScene(name) {
 export function sceneFor(kind, stats, persona) {
   switch (kind) {
     case 'cover': return scene('dusk');
-    case 'summary': return scene('sunrise', null, 'chorus');
+    case 'summary': return scene('sunrise');
     case 'clock': return clockScene(stats.startHours);
     case 'months': return monthsScene(stats.monthly);
     case 'persona': return PERSONAS[persona?.id] ?? NEUTRAL;
