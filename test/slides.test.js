@@ -5,6 +5,7 @@ import { parseEbirdExport } from '../js/parse.js';
 import { computeYear } from '../js/stats.js';
 import { pickPersona } from '../js/persona.js';
 import { buildCards } from '../js/slides.js';
+import { buildPlaces } from '../js/places.js';
 
 const demo = parseEbirdExport(readFileSync(new URL('../samples/demo.csv', import.meta.url), 'utf8'));
 
@@ -47,14 +48,15 @@ test('a one-checklist cover says "1 checklist"', () => {
   assert.match(html, /1 checklist &middot;/);
 });
 
-test('the Kent County quip only goes to Kent County birders', () => {
+test('the common-bird quip names no place and goes to anyone with a common No. 1', () => {
   const s = computeYear(demo, 2026);
   const p = pickPersona(s);
-  const top = [{ name: 'Canada Goose', checklists: 20, share: 0.5 }, { name: 'Blue Jay', checklists: 10, share: 0.25 }];
-  const quip = /basically everyone in Kent County/;
-  assert.match(buildCards({ ...s, kentShare: 1, topSpeciesList: top }, p, null).join(''), quip);
-  assert.doesNotMatch(buildCards({ ...s, kentShare: 0, topSpeciesList: top }, p, null).join(''), quip);
-  assert.doesNotMatch(buildCards({ ...s, kentShare: 1, checklists: 3, topSpeciesList: top }, p, null).join(''), quip);
+  const top = (name) => [{ name, checklists: 20, share: 0.5 }, { name: 'Blue Jay', checklists: 10, share: 0.25 }];
+  const quip = /<p class="quip"[^>]*>Same as basically everyone\.<\/p>/;
+  assert.match(buildCards({ ...s, kentShare: 0, topSpeciesList: top('American Robin') }, p, null).join(''), quip);
+  assert.doesNotMatch(buildCards({ ...s, topSpeciesList: top('Canada Goose') }, p, null).join(''), /Kent County\.<\/p>/);
+  assert.doesNotMatch(buildCards({ ...s, topSpeciesList: top('Snowy Owl') }, p, null).join(''), quip);
+  assert.doesNotMatch(buildCards({ ...s, checklists: 3, topSpeciesList: top('American Robin') }, p, null).join(''), quip);
 });
 
 test('a tie for top bird is named and shares its rank', () => {
@@ -85,4 +87,25 @@ test('the summary shows three highlights and the effort line', () => {
   assert.match(summary, /card-summary/);
   assert.equal(summary.match(/class="sum-label"/g).length, 3);
   assert.match(summary, /class="sum-effort"/);
+});
+
+test('the Summary path connects the dots: dots land first, then each arc draws in turn', () => {
+  const s = computeYear(demo, 2026);
+  const places = buildPlaces(s.lists);
+  const cards = buildCards(s, pickPersona(s), places);
+  const summary = cards.at(-1);
+  assert.match(summary, /card-summary/);
+  const dots = [...summary.matchAll(/<circle data-fx="dot" style="--d:(\d+)ms" data-pins="([\d ]+)"/g)];
+  const arcs = [...summary.matchAll(/data-fx="draw" style="--d:(\d+)ms;--dur:(\d+)ms"/g)].map((m) => [+m[1], +m[2]]);
+  assert.ok(dots.length >= 2 && arcs.length >= 1, `${dots.length} dots, ${arcs.length} arcs`);
+  const named = dots.flatMap((d) => d[2].split(' ').map(Number));
+  assert.deepEqual(named.sort((a, b) => a - b), places.pins.map((_, i) => i), 'every map pin lands on exactly one dot');
+  const lastDot = Math.max(...dots.map((d) => +d[1]));
+  assert.ok(lastDot < arcs[0][0], 'every dot is in place before the first arc draws');
+  for (let i = 1; i < arcs.length; i++) assert.ok(arcs[i][0] > arcs[i - 1][0], 'arcs draw one after another');
+  const end = Math.max(...arcs.map(([d, dur]) => d + dur));
+  assert.ok(end <= 2700, `the path is drawn by ${end} ms`);
+  // The cover keeps its quick all-at-once drawing.
+  const cover = cards[0];
+  assert.ok(+cover.match(/data-fx="draw" style="--d:(\d+)ms/)[1] < 300);
 });

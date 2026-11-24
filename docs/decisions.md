@@ -59,3 +59,17 @@ Append-only. One entry per decision someone might later question or reverse.
 **Decision:** the evening clock scene (peak 5–8 pm) and the evening persona show blinking owl eyes and play the owl, like the night scene. The eyes sit in the widest margin round the card, or below it on phones.
 **Why:** the owner expected owls for an evening birder. Before this, only a peak hour from 8 pm to 4 am had them, so most people never saw them.
 **Cost if wrong:** evening loses its plain golden-hour calm. Revert `GOLDEN` in `js/fx/scenes.js`.
+
+## 2026-11-24 · The top-birds quip names no place
+
+**Decision:** "Same as basically everyone in Kent County." became "Same as basically everyone." It now goes to anyone whose No. 1 is one of the 16 common birds, in a year of ten or more checklists. The rule that half your checklists be in Kent County is gone.
+**Why:** deck links get shared on the statewide Discord beyond the Kent channel. The owner's own top five (robin, chickadee, cardinal, jay, goldfinch) were common birds, but the Kent rule hid the line.
+**Kept:** `kentShare` is still computed and packed but no card uses it, so the packed deck shape and `VERSION` are unchanged.
+**Cost if wrong:** a birder far from Michigan whose No. 1 is, say, House Sparrow gets the joke too. That is probably fine.
+
+## 2026-11-24 · The Summary connects the dots instead of landing with a thud
+
+**Decision:** PR #13's thud (drop, squash, shake, startled flock) is reverted. Coming from the map, the map's pins fly onto the Summary's dots. Then a bird flies the flight path arc by arc while the card draws it, and then the flock leaves in a V.
+**Why:** the owner felt the thud was fine but disconnected from the deck. The map card just before the Summary builds the places that the flight path joins, so the transition should show that link.
+**How:** the card's own entrance now draws its dots at 850 ms and its arcs in turn from 1000 to 2600 ms (`PATH_TIMING` in `js/slides.js`), even with effects off. The map card records its pins' final positions (`card.pinSpots`). `js/fx/index.js` measures a frame after `onCard`, once the "Download all" row has moved the card.
+**Cost if wrong:** a year with hundreds of distinct arcs scribbles quickly. The tracer bird jumps between many short arcs within 1.4 s.

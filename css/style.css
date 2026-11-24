@@ -509,7 +509,7 @@ code {
 .card.play [data-fx="draw"] {
   stroke-dasharray: 1;
   animation-name: fx-draw;
-  animation-duration: 420ms;
+  animation-duration: var(--dur, 420ms);
   animation-timing-function: ease-out;
 }
 .card.play [data-fx="dot"] { animation-name: fx-dot; transform-box: fill-box; transform-origin: center; }

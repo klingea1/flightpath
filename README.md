@@ -37,8 +37,10 @@ there is no server, account, or database.
    whole calendar year, oldest absence first. Needs at least two.
 6. **Top spot**: your most-visited location and any species you found only there.
 7. **Top birds**: top five species by how many of your checklists they appeared on.
-   Ties share a rank. When #1 is a Kent County staple and you bird mostly in
-   Kent County (ten checklists or more), the card admits it.
+   Ties share a rank. When #1 is one of the birds nearly everyone logs (robin,
+   chickadee, cardinal, goose…) and the year has ten checklists or more, the
+   card admits it: "Same as basically everyone." It names no place, since
+   deck links travel beyond the Kent channel.
 8. **Seen exactly once**: birds that showed up on a single checklist all year.
 9. **Months**: checklists per month, with your busiest month called out.
 10. **Spring arrivals**: first-of-year dates for returning migrants in your
@@ -193,11 +195,12 @@ contains them.
   one of dawn, day, evening, night, winter, spring, summer, autumn, sunrise,
   dusk, fireflies or lake. The cover and summary
   skies carry on past the card's edges.
-- **The Summary lands with a thud.** The card drops in, squashes on impact
-  and settles, the screen shakes, and the flock scatters up and away from the
-  impact before regrouping into a V and leaving. The motion is on the stage
-  and the deck, never the card, so a saved image is never mid-squash.
-- **Sound.** An egg crack, wings, wind, a dawn chorus, an owl and gulls, from
+- **The Summary connects the dots.** Coming from the map, its pins lift off
+  and fly onto the Summary's dots. Then a glowing bird flies the flight path
+  arc by arc as the card draws it, in the order the year went, and the flock
+  leaves in a V. Without effects the card still draws its dots first and its
+  arcs one after another.
+- **Sound.** An egg crack, wings, wind, a dawn chorus (dawn scenes only), an owl and gulls, from
   CC0 files in `sounds/` (a missing file is just silent). Sound starts only
   after a drop, tap or key press, is on at a gentle volume, and has a mute
   button the site remembers. It pauses when the tab is hidden.

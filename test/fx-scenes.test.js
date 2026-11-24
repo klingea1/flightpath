@@ -8,7 +8,7 @@ const neutral = { sky: 'neutral', particles: null, sound: 'wind' };
 
 test('cover and summary continue their own skies', () => {
   assert.deepEqual(sceneFor('cover', {}), { sky: 'dusk', particles: null, sound: 'wind' });
-  assert.deepEqual(sceneFor('summary', {}), { sky: 'sunrise', particles: null, sound: 'chorus' });
+  assert.deepEqual(sceneFor('summary', {}), { sky: 'sunrise', particles: null, sound: 'wind' });
 });
 
 test('clock follows the peak hour', () => {
@@ -36,7 +36,7 @@ test('months follows the busiest month; a quiet year is neutral', () => {
   assert.deepEqual(sceneFor('months', { monthly: months(0) }), { sky: 'winter', particles: 'snow', sound: 'wind' });
   assert.equal(sceneFor('months', { monthly: months(11) }).sky, 'winter');
   assert.equal(sceneFor('months', { monthly: months(1) }).sky, 'winter');
-  assert.deepEqual(sceneFor('months', { monthly: months(3) }), { sky: 'spring', particles: 'blossoms', sound: 'chorus' });
+  assert.deepEqual(sceneFor('months', { monthly: months(3) }), { sky: 'spring', particles: 'blossoms', sound: 'wind' });
   assert.deepEqual(sceneFor('months', { monthly: months(6) }), { sky: 'summer', particles: 'haze', sound: 'wind' });
   assert.deepEqual(sceneFor('months', { monthly: months(9) }), { sky: 'autumn', particles: 'leaves', sound: 'wind' });
   assert.deepEqual(sceneFor('months', { monthly: Array(12).fill(0) }), neutral);
@@ -51,8 +51,17 @@ test('a preview name forces one scene; unknown names are ignored', () => {
   assert.deepEqual(previewScene('night'), { sky: 'night', particles: 'stars', sound: 'owl' });
   assert.deepEqual(previewScene('evening'), { sky: 'golden', particles: 'eyes', sound: 'owl' });
   assert.deepEqual(previewScene('winter'), { sky: 'winter', particles: 'snow', sound: 'wind' });
-  assert.deepEqual(previewScene('spring'), { sky: 'spring', particles: 'blossoms', sound: 'chorus' });
+  assert.deepEqual(previewScene('spring'), { sky: 'spring', particles: 'blossoms', sound: 'wind' });
   assert.equal(previewScene('dawn').sky, 'dawn');
   assert.equal(previewScene('nonsense'), null);
   assert.equal(previewScene(null), null);
+});
+
+test('the dawn chorus is kept for dawn: the dawn hours and the dawn persona only', () => {
+  const kinds = [];
+  for (let h = 0; h < 24; h++) kinds.push(sceneFor('clock', { startHours: hours(h) }));
+  for (let m = 0; m < 12; m++) kinds.push(sceneFor('months', { monthly: months(m) }));
+  for (const id of ['dawn', 'evening', 'sitspot', 'lakeshore', 'trail']) kinds.push(sceneFor('persona', {}, { id }));
+  kinds.push(sceneFor('cover', {}), sceneFor('summary', {}), sceneFor('headline', {}));
+  for (const k of kinds) if (k.sound === 'chorus') assert.equal(k.sky, 'dawn');
 });

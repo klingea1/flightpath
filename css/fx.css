@@ -89,27 +89,3 @@
 }
 #gate-open:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; border-radius: 12px; }
 #gate-open span { display: block; margin-top: 8px; font-weight: 700; color: var(--accent); }
-
-/* The Summary lands with a thud (index.js adds the classes): the stage drops
-   the card in, it squashes on impact and settles, and the screen shakes. Never
-   on .card itself, so a saved image is never caught mid-squash. */
-.fx-on .stage.thud { animation: fx-thud 650ms both; transform-origin: 50% 100%; }
-@keyframes fx-thud {
-  0%   { transform: translateY(-16vh) scale(1.04); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
-  40%  { transform: translateY(0) scale(1); animation-timing-function: ease-out; }
-  50%  { transform: scale(1.04, 0.94); }
-  64%  { transform: scale(0.985, 1.02); }
-  80%  { transform: scale(1.006, 0.996); }
-  100% { transform: none; }
-}
-.fx-on #deck.shake { animation: fx-shake 360ms linear; }
-@keyframes fx-shake {
-  0%   { transform: translate(0, 0); }
-  12%  { transform: translate(-7px, 4px); }
-  26%  { transform: translate(6px, -3px); }
-  40%  { transform: translate(-4px, 2px); }
-  55%  { transform: translate(3px, -2px); }
-  70%  { transform: translate(-2px, 1px); }
-  85%  { transform: translate(1px, 0); }
-  100% { transform: translate(0, 0); }
-}

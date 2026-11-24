@@ -313,6 +313,10 @@ export async function mountMap(card, places, stats) {
     return { wx, wy, final: pinRadius(p.visits) };
   });
 
+  // Where each pin sits on the finished map, in card pixels: [x, y, r]. The
+  // Summary's flight path starts from here (js/fx connects the dots).
+  card.pinSpots = worldPins.map((p) => [...toScreen(finalCam, p.wx, p.wy, W, H), p.final]);
+
   const insetBox = card.querySelector('.map-inset');
   if (insetBox) {
     const ictx = makeCanvas(insetBox.querySelector('.map-inset-host'), 340, 340);

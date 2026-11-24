@@ -6,13 +6,13 @@ import { deckSeed } from './seed.js';
 import { sceneFor, previewScene } from './scenes.js';
 import { samplePoints, ringTargets, arcTargets, useRing } from './targets.js';
 import { createSequence } from './sequence.js';
+import { parseArc } from './trace.js';
 import { createSky } from './sky.js';
 import { createOverlay } from './overlay.js';
 import { createSound } from './sound.js';
 import { createEgg as createFlatEgg } from './egg-flat.js';
 
 const MAX_BIRDS = 600;
-const THUD_MS = 650, IMPACT_MS = 260; // the Summary's drop: it lands 40% of the way in
 const $ = (id) => document.getElementById(id);
 
 export function initEffects({ search, reduceMotion }) {
@@ -34,7 +34,9 @@ export function initEffects({ search, reduceMotion }) {
   let murmur = null; // { frame, timers }
   let hatching = false; // a hatch is running: new files and clicks wait
   let releaseTimer = 0;
-  let thudTimers = [];
+  let leaveTimer = 0;
+  let connectFrame = 0;
+  let lastKind = null;
   // ?scene=night (or dawn, evening, winter, spring, …) shows that scene on every card.
   const preview = previewScene(new URLSearchParams(search).get('scene'));
 
@@ -225,32 +227,47 @@ export function initEffects({ search, reduceMotion }) {
     return pts;
   }
 
-  // The Summary lands with a thud: the deck drops it in and it squashes, the
-  // screen shakes, and the flock scatters from the impact before regrouping
-  // into a V and leaving. The motion is on #stage and #deck, never the card.
-  function thud(frame) {
-    endThud();
-    const stage = frame.parentElement, deck = $('deck');
-    void stage.offsetWidth; // restart the animation if it just ran
-    stage.classList.add('thud');
-    thudTimers.push(setTimeout(() => {
-      deck.classList.add('shake');
-      const r = frame.querySelector('.card')?.getBoundingClientRect();
-      if (r) overlay.startle(r.left + r.width / 2, r.bottom);
-      sound.play('flutter');
-    }, IMPACT_MS));
-    thudTimers.push(setTimeout(() => {
-      endThud();
-      overlay.setCardRect(cardRect()); // measured mid-drop; now it has landed
-    }, THUD_MS + 60));
-    thudTimers.push(setTimeout(leave, IMPACT_MS + 750));
-  }
-
-  function endThud() {
-    thudTimers.forEach(clearTimeout);
-    thudTimers = [];
-    $('stage')?.classList.remove('thud');
-    $('deck')?.classList.remove('shake');
+  // The Summary connects the dots. Coming from the map, its pins fly onto the
+  // Summary's dots; then a bird flies the path as the card draws it, arc by
+  // arc; then the flock leaves. Positions are measured against the card and
+  // placed in its frame, which sits still while the card slides in; every
+  // frame has the same box, so the map's pins land in the same space.
+  function connectDots(frame, fromMap) {
+    const box = frame.getBoundingClientRect();
+    const k = box.width / 1080;
+    const svg = frame.querySelector('.sum-art');
+    const card = frame.querySelector('.card');
+    if (!svg || !card) return 0;
+    const cardBox = card.getBoundingClientRect();
+    const m = svg.getScreenCTM();
+    if (!m) return 0;
+    // The drawing's own transform (it letterboxes its viewBox), less wherever
+    // the sliding card is right now relative to where it lands.
+    // (offsetLeft/Top place the card in its frame ignoring transforms; frame px × k.)
+    const restX = box.left + card.offsetLeft * k, restY = box.top + card.offsetTop * k;
+    const sx = cardBox.left - restX, sy = cardBox.top - restY;
+    const at = (x, y) => [m.a * x + m.c * y + m.e - sx, m.b * x + m.d * y + m.f - sy];
+    const ks = Math.hypot(m.a, m.b);
+    const spots = fromMap ? frame.previousElementSibling?.querySelector('.card-map')?.pinSpots : null;
+    const hops = [];
+    for (const c of svg.querySelectorAll('.dots circle')) {
+      const to = [...at(+c.getAttribute('cx'), +c.getAttribute('cy')), 9 * ks];
+      for (const pin of (c.dataset.pins ?? '').split(' ').filter(Boolean)) {
+        const p = spots?.[+pin];
+        // The map card sat in its frame where this card does.
+        if (p) hops.push({ from: [restX + p[0] * k, restY + p[1] * k, Math.max(2, p[2] * k)], to });
+      }
+    }
+    const arcs = [];
+    for (const path of svg.querySelectorAll('.arcs path')) {
+      const a = parseArc(path.getAttribute('d'));
+      if (!a) continue;
+      const [x1, y1] = at(a.x1, a.y1), [cx, cy] = at(a.cx, a.cy), [x2, y2] = at(a.x2, a.y2);
+      arcs.push({ x1, y1, cx, cy, x2, y2, start: parseFloat(path.style.getPropertyValue('--d')) || 0, ms: parseFloat(path.style.getPropertyValue('--dur')) || 420 });
+    }
+    arcs.sort((a, b) => a.start - b.start);
+    overlay.connect({ hops, arcs, land: 850 });
+    return arcs.length ? arcs.at(-1).start + arcs.at(-1).ms : 850;
   }
 
   // On the Summary the flock forms a loose V and leaves off the top.
@@ -347,7 +364,11 @@ export function initEffects({ search, reduceMotion }) {
     /** The card now showing: its sky, particles, sound, and the Headline's murmuration. */
     onCard(frame, kind, stats, persona) {
       endMurmur();
-      endThud();
+      clearTimeout(leaveTimer);
+      cancelAnimationFrame(connectFrame);
+      overlay.endConnect();
+      const from = lastKind;
+      lastKind = kind;
       // The flock's flight in from the hatch mustn't cut across a new card's shape.
       if (kind !== 'cover') clearTimeout(releaseTimer);
       // Back from the Summary's exit (or any shape): the flock flies free again.
@@ -359,9 +380,12 @@ export function initEffects({ search, reduceMotion }) {
       overlay.setCardRect(frame.querySelector('.card')?.getBoundingClientRect() ?? null);
       if (kind !== 'summary' && overlay.flock && overlay.flock.n < birds) overlay.setFlock(birds);
       if (kind === 'headline') murmuration(frame);
+      // The flock waits for the path to be drawn, then leaves. Measured a frame
+      // later: showing the Summary also shows its "Download all" row, which
+      // moves the card up once the layout settles.
       if (kind === 'summary') {
         if (mode === 'calm') leave();
-        else thud(frame);
+        else connectFrame = requestAnimationFrame(() => { leaveTimer = setTimeout(leave, connectDots(frame, from === 'map') + 200); });
       }
     },
 
@@ -383,7 +407,10 @@ export function initEffects({ search, reduceMotion }) {
 
     resetForUpload() {
       endMurmur();
-      endThud();
+      clearTimeout(leaveTimer);
+      cancelAnimationFrame(connectFrame);
+      overlay.endConnect();
+      lastKind = null;
       clearTimeout(releaseTimer);
       sequence = null;
       hatching = false;

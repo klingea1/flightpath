@@ -49,14 +49,29 @@ function footer(year) {
   return `<footer class="card-foot"><span>Flight Path</span><span>${year}</span></footer>`;
 }
 
-// Every checklist's place in date order, as [lng, lat]. Places are the map's
-// grid-snapped pins, so the drawing never carries exact coordinates.
+// Every checklist's place in date order, as [lng, lat, pin]. Places are the
+// map's grid-snapped pins, so the drawing never carries exact coordinates.
 function flightPoints(places) {
-  return places ? places.sequence.map((v) => [places.pins[v.pin].lng, places.pins[v.pin].lat]) : [];
+  return places ? places.sequence.map((v) => [places.pins[v.pin].lng, places.pins[v.pin].lat, v.pin]) : [];
 }
 
-// Draws every checklist location in date order as a chain of arcs.
-function flightPathSvg(pts, w, h) {
+// When the path's parts appear. The cover draws its arcs all at once. The
+// Summary connects the dots: the map's pins land as its dots first, then each
+// arc draws in turn, the way the year went (js/fx traces it with a bird).
+const PATH_TIMING = {
+  cover: { dots: () => 900, arc: (i, n) => [120 + (900 * i) / n, null] },
+  summary: {
+    dots: () => 850,
+    arc: (i, n) => {
+      const step = 1400 / Math.max(1, n - 1);
+      return [Math.round(1000 + step * (i - 1)), Math.round(Math.max(90, Math.min(420, step * 1.6)))];
+    },
+  },
+};
+
+// Draws every checklist location in date order as a chain of arcs. Each dot
+// carries data-pin, its map pin's index.
+function flightPathSvg(pts, w, h, timing = PATH_TIMING.cover) {
   if (!pts.length) return '';
 
   const midLat = pts.reduce((s, p) => s + p[1], 0) / pts.length;
@@ -72,7 +87,13 @@ function flightPathSvg(pts, w, h) {
   const oy = (h - (maxY - minY) * scale) / 2;
   const proj = pts.map((p, i) => [ox + (xs[i] - minX) * scale, oy + (maxY - ys[i]) * scale]);
 
+  // Arcs between distinct places, numbered in the order they draw.
+  const drawn = [];
+  for (let i = 1; i < proj.length; i++) {
+    if (proj[i - 1][0] !== proj[i][0] || proj[i - 1][1] !== proj[i][1]) drawn.push(i);
+  }
   let paths = '';
+  let k = 0;
   for (let i = 1; i < proj.length; i++) {
     const [x1, y1] = proj[i - 1];
     const [x2, y2] = proj[i];
@@ -81,14 +102,21 @@ function flightPathSvg(pts, w, h) {
     const bend = (i % 2 ? 0.25 : -0.25) * (1 + (i % 5) / 5);
     const cx = (x1 + x2) / 2 - dy * bend;
     const cy = (y1 + y2) / 2 + dx * bend;
-    const delay = 120 + (900 * i) / proj.length;
-    paths += `<path pathLength="1"${fx('draw', delay)} d="M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+    const [delay, dur] = timing.arc(++k, drawn.length);
+    const anim = dur == null ? fx('draw', delay) : ` data-fx="draw" style="--d:${delay}ms;--dur:${dur}ms"`;
+    paths += `<path pathLength="1"${anim} d="M${x1.toFixed(1)} ${y1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
   }
 
-  const unique = [...new Set(proj.map((p) => p.map((v) => v.toFixed(0)).join(',')))];
-  const dots = unique.map((k) => {
+  // One dot per spot, listing every map pin that lands there (data-pins).
+  const spots = new Map();
+  proj.forEach((p, i) => {
+    const k = p.map((v) => v.toFixed(0)).join(',');
+    if (!spots.has(k)) spots.set(k, new Set());
+    if (pts[i][2] !== undefined) spots.get(k).add(pts[i][2]);
+  });
+  const dots = [...spots].map(([k, pins]) => {
     const [x, y] = k.split(',');
-    return `<circle${fx('dot', 900)} cx="${x}" cy="${y}" r="9"/>`;
+    return `<circle${fx('dot', timing.dots())}${pins.size ? ` data-pins="${[...pins].join(' ')}"` : ''} cx="${x}" cy="${y}" r="9"/>`;
   }).join('');
 
   return `<svg class="path-art" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
@@ -205,20 +233,17 @@ function spotCard(s) {
   </section>`;
 }
 
-// Birds nearly every Kent County birder logs constantly. If one tops your
-// list, the card says so.
-const KENT_STAPLES = new Set([
+// Birds nearly every birder around here logs constantly. If one tops your
+// list, the card says so. The line names no place: deck links travel.
+const COMMON_BIRDS = new Set([
   'Canada Goose', 'Mallard', 'American Robin', 'Northern Cardinal', 'Blue Jay',
   'Black-capped Chickadee', 'American Crow', 'Mourning Dove', 'European Starling',
   'House Sparrow', 'Song Sparrow', 'Red-winged Blackbird', 'American Goldfinch',
   'Downy Woodpecker', 'Red-bellied Woodpecker', 'Ring-billed Gull',
 ]);
 
-// The quip is a Kent County joke, so it only goes to Kent County birders with
-// enough checklists for "basically everyone" to mean something.
-function birdsInKent(s) {
-  return s.checklists >= 10 && s.kentShare >= 0.5;
-}
+// Enough checklists for "basically everyone" to mean something.
+const quipFits = (s, top) => COMMON_BIRDS.has(top.name) && s.checklists >= 10;
 
 function topBirdsCard(s) {
   const [top, ...rest] = s.topSpeciesList;
@@ -235,7 +260,7 @@ function topBirdsCard(s) {
       <span class="rank">No. 1</span>
       <h2 class="card-title">${esc(top.name)}</h2>
       <p class="card-sub">On ${Math.round(top.share * 100)}% of your checklists, ${plural(top.checklists, 'list')} in all${tie}</p>
-      ${KENT_STAPLES.has(top.name) && birdsInKent(s) ? `<p class="quip"${fx('rise', 700 + rest.length * 170)}>Same as basically everyone in Kent County.</p>` : ''}
+      ${quipFits(s, top) ? `<p class="quip"${fx('rise', 700 + rest.length * 170)}>Same as basically everyone.</p>` : ''}
     </div>
     <ol class="rank-list" start="2">
       ${rest.map((b, i) => `<li${fx('slide', 200 + (rest.length - 1 - i) * 170)}><span class="rank">${rank(b)}</span><span class="rank-name">${esc(b.name)}</span><span class="rank-n">${fmt(b.checklists)}</span></li>`).join('')}
@@ -418,7 +443,7 @@ function summaryCard(s, path) {
   return `
   <section class="card card-summary">
     <h2 class="sum-title">My <span class="year">${s.year}</span> Flight Path</h2>
-    ${flightPathSvg(path, CARD_W, 500).replace('class="path-art"', 'class="path-art sum-art"')}
+    ${flightPathSvg(path, CARD_W, 500, PATH_TIMING.summary).replace('class="path-art"', 'class="path-art sum-art"')}
     <div class="sum-hero"${fx('rise', 700)}>
       <span class="sum-big"${count}>${fmt(s.species)}</span>
       <span class="sum-big-label">species</span>
