@@ -31,6 +31,8 @@ export function initEffects({ search, reduceMotion }) {
   let egg = null;
   let sequence = null;
   let murmur = null; // { frame, timers }
+  let hatching = false; // a hatch is running: new files and clicks wait
+  let releaseTimer = 0;
 
   // The WebGL egg when it starts cleanly; otherwise (or calm) the painted one.
   const eggReady = (async () => {
@@ -46,15 +48,22 @@ export function initEffects({ search, reduceMotion }) {
         $('egg').replaceWith(fresh);
       }
     }
-    egg = createFlatEgg($('egg'), { seed, still: mode === 'calm' });
+    try {
+      egg = createFlatEgg($('egg'), { seed, still: mode === 'calm' });
+    } catch (e) {
+      // No canvas at all: the deck still opens, just without an egg.
+      console.warn('No egg:', e);
+      egg = null;
+    }
   })();
 
   // Mute buttons: shown only when effects are on.
   const muteButtons = [...document.querySelectorAll('.mute-toggle')];
+  // An action label, so a screen reader hears what a press will do.
   const paintMute = () => muteButtons.forEach((b) => {
     b.hidden = false;
-    b.setAttribute('aria-pressed', String(sound.muted));
-    b.textContent = sound.muted ? 'Sound off' : 'Sound on';
+    b.removeAttribute('aria-pressed');
+    b.textContent = sound.muted ? 'Turn sound on' : 'Turn sound off';
   });
   muteButtons.forEach((b) => b.addEventListener('click', () => { sound.setMuted(!sound.muted); paintMute(); }));
   paintMute();
@@ -88,14 +97,14 @@ export function initEffects({ search, reduceMotion }) {
     return card ? card.getBoundingClientRect() : null;
   }
 
-  function afterReveal(burstAt) {
-    if (overlay.flock && overlay.flock.n !== birds) {
-      // Skipped before the burst: release the flock from where the egg was.
-      overlay.burst(burstAt.x, burstAt.y, birds);
-    }
+  // burst: whether the shell already broke. Skipped earlier, the flock bursts
+  // now, from where the egg was (measured before the upload screen hid).
+  function afterReveal(burstAt, burst) {
+    if (!burst) overlay.burst(burstAt.x, burstAt.y, birds);
     overlay.setCardRect(cardRect());
     overlay.flyTo(arcTargets(birds, coverArc(), 18, seed), 0.8);
-    setTimeout(() => overlay.release(), 1000);
+    clearTimeout(releaseTimer);
+    releaseTimer = setTimeout(() => overlay.release(), 1000);
   }
 
   // Ends a murmuration now (the number fades back in).
@@ -146,7 +155,8 @@ export function initEffects({ search, reduceMotion }) {
   function murmuration(frame) {
     const el = frame.querySelector('[data-murmur]');
     const n = overlay.flock?.n ?? 0;
-    if (!el || !n || mode === 'calm') return;
+    // A card being saved right now keeps its number showing.
+    if (!el || !n || mode === 'calm' || frame.capturing) return;
     const timers = [];
     murmur = { frame, timers };
     overlay.birdColor(getComputedStyle(el).color);
@@ -203,49 +213,81 @@ export function initEffects({ search, reduceMotion }) {
     unlock() { sound.unlock(); },
     wobble(level) { egg?.wobble(level); },
 
+    /** True while a hatch runs: the app ignores new files and clicks until the deck shows. */
+    get busy() { return hatching; },
+
     /** Hatches the egg, then calls reveal() (exactly once) to show the deck. */
     async hatch(stats, reveal) {
-      sound.unlock();
-      await eggReady;
-      seed = deckSeed(stats);
-      birds = Math.min(stats.species, MAX_BIRDS);
-      const hostBox = host.getBoundingClientRect();
-      const burstAt = { x: hostBox.left + hostBox.width / 2, y: hostBox.top + hostBox.height * 0.35 };
-      if (mode === 'calm') {
-        host.classList.add('fading');
-        await new Promise((r) => setTimeout(r, 400));
-        reveal();
-        return;
-      }
-      if (sequence?.running) return;
-      overlay.setFlock(0);
+      if (hatching) return;
+      hatching = true;
       const screen = host.closest('.screen');
-      screen?.classList.add('hatching');
-      const skip = () => sequence?.skip();
-      sequence = createSequence({
-        run: () => egg.hatch({
-          onCrack: () => sound.play('crack'),
-          onBurst: (p) => { sound.play('flutter'); Object.assign(burstAt, p); overlay.burst(p.x, p.y, birds); },
-        }),
-        reveal: () => {
-          document.removeEventListener('pointerdown', skip);
-          document.removeEventListener('keydown', skip);
-          screen?.classList.remove('hatching');
-          reveal();
-          afterReveal(burstAt);
-        },
-      });
-      // A tap or key press during the hatch skips straight to the deck.
-      setTimeout(() => {
-        document.addEventListener('pointerdown', skip, { once: true });
-        document.addEventListener('keydown', skip, { once: true });
-      }, 0);
-      await sequence.start();
+      let revealed = false;
+      let burst = false;
+      const burstAt = { x: 0, y: 0 };
+      // While hatching, the invisible upload controls can't be reached, and a
+      // tap, key press or stray drop only skips.
+      const skip = (e) => { e.preventDefault(); e.stopPropagation(); sequence?.skip(); };
+      const block = (e) => { e.preventDefault(); e.stopPropagation(); };
+      const listen = (on) => {
+        const f = on ? 'addEventListener' : 'removeEventListener';
+        document[f]('pointerdown', skip, true);
+        document[f]('keydown', skip, true);
+        document[f]('dragover', block, true);
+        document[f]('drop', block, true);
+      };
+      const show = (afterwards) => {
+        if (revealed) return;
+        revealed = true;
+        hatching = false;
+        listen(false);
+        if (screen) { screen.classList.remove('hatching'); screen.inert = false; }
+        reveal();
+        afterwards?.();
+      };
+      try {
+        sound.unlock();
+        await eggReady;
+        seed = deckSeed(stats);
+        birds = Math.min(stats.species, MAX_BIRDS);
+        const hostBox = host.getBoundingClientRect();
+        Object.assign(burstAt, { x: hostBox.left + hostBox.width / 2, y: hostBox.top + hostBox.height * 0.35 });
+        if (mode === 'calm' || !egg) {
+          if (egg) {
+            host.classList.add('fading');
+            await new Promise((r) => setTimeout(r, 400));
+          }
+          show();
+          return;
+        }
+        overlay.setFlock(0);
+        if (screen) { screen.classList.add('hatching'); screen.inert = true; }
+        sequence = createSequence({
+          run: () => egg.hatch({
+            // After a skip the egg may still be breaking off-screen: stay quiet.
+            onCrack: () => { if (!revealed) sound.play('crack'); },
+            onBurst: (p) => {
+              if (revealed) return;
+              burst = true;
+              sound.play('flutter');
+              Object.assign(burstAt, p);
+              overlay.burst(p.x, p.y, birds);
+            },
+          }),
+          reveal: () => show(() => afterReveal(burstAt, burst)),
+        });
+        listen(true);
+        await sequence.start();
+      } catch (e) {
+        console.warn('Hatch failed, opening the deck:', e);
+        show();
+      }
     },
 
     /** The card now showing: its sky, particles, sound, and the Headline's murmuration. */
     onCard(frame, kind, stats, persona) {
       endMurmur();
+      // The flock's flight in from the hatch mustn't cut across a new card's shape.
+      if (kind !== 'cover') clearTimeout(releaseTimer);
       const scene = sceneFor(kind, stats, persona);
       sky.set(scene.sky);
       overlay.setParticles(scene.particles);
@@ -274,7 +316,9 @@ export function initEffects({ search, reduceMotion }) {
 
     resetForUpload() {
       endMurmur();
+      clearTimeout(releaseTimer);
       sequence = null;
+      hatching = false;
       overlay.setFlock(0);
       overlay.setParticles(null);
       overlay.setCardRect(null);
@@ -309,7 +353,7 @@ function mode0WebGL(search, reduceMotion) {
 function offEffects() {
   const noop = () => {};
   return {
-    mode: 'off', unlock: noop, wobble: noop, settleForSave: noop, resetForUpload: noop, resizeFlock: noop, onResize: noop, onCard: noop,
+    mode: 'off', busy: false, unlock: noop, wobble: noop, settleForSave: noop, resetForUpload: noop, resizeFlock: noop, onResize: noop, onCard: noop,
     async hatch(stats, reveal) { reveal(); },
     async gate() {},
     needsGate: false,

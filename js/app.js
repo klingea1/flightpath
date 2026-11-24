@@ -232,7 +232,9 @@ function cardImage(frame) {
     const ctl = await frame.mapReady;
     if (ctl?.running) await ctl.skip();
     const card = frame.querySelector('.card');
-    // The capture copies computed styles, so the murmuration's hidden number must be back first.
+    // The capture copies computed styles, so the murmuration's hidden number
+    // must be back first, and must not hide again until the capture is done.
+    frame.capturing = true;
     fx.settleForSave(frame);
     settle(card);
     // A card that isn't showing is laid out off-screen while it's captured.
@@ -244,6 +246,7 @@ function cardImage(frame) {
       const fontEmbedCSS = await fontCss;
       return await window.htmlToImage.toBlob(card, { width: CARD_W, height: CARD_H, pixelRatio: 1, fontEmbedCSS });
     } finally {
+      frame.capturing = false;
       if (offstage) frame.classList.remove('offstage');
     }
   })();
@@ -385,7 +388,8 @@ function setBusy(busy) {
 }
 
 async function readFile(file) {
-  if (!file) return;
+  // While the egg hatches, a second file waits its turn (drop it again after).
+  if (!file || fx.busy) return;
   showError('');
   setBusy(true);
   // Let the busy message paint before the heavy work starts.
@@ -416,6 +420,7 @@ $('drop').addEventListener('drop', (e) => {
   readFile(e.dataTransfer.files[0]);
 });
 $('demo').addEventListener('click', async () => {
+  if (fx.busy) return;
   fx.unlock();
   const res = await fetch('samples/demo.csv');
   load(await res.text());
