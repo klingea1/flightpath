@@ -3,7 +3,7 @@
 // nothing and the deck behaves exactly as it did before effects existed.
 import { effectsMode, needsGate, hasWebGL } from './mode.js';
 import { deckSeed } from './seed.js';
-import { sceneFor } from './scenes.js';
+import { sceneFor, previewScene } from './scenes.js';
 import { samplePoints, ringTargets, arcTargets, useRing } from './targets.js';
 import { createSequence } from './sequence.js';
 import { createSky } from './sky.js';
@@ -33,6 +33,8 @@ export function initEffects({ search, reduceMotion }) {
   let murmur = null; // { frame, timers }
   let hatching = false; // a hatch is running: new files and clicks wait
   let releaseTimer = 0;
+  // ?scene=night (or dawn, evening, winter, spring, …) shows that scene on every card.
+  const preview = previewScene(new URLSearchParams(search).get('scene'));
 
   // The WebGL egg when it starts cleanly; otherwise (or calm) the painted one.
   const eggReady = (async () => {
@@ -102,6 +104,25 @@ export function initEffects({ search, reduceMotion }) {
   function cardRect() {
     const card = document.querySelector('.card-frame.active .card');
     return card ? card.getBoundingClientRect() : null;
+  }
+
+  // The page fades away and the egg glides to the middle of the screen and
+  // grows, while the chick pecks. The transform is undone in resetForUpload.
+  function zoomIn() {
+    const box = host.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const scale = Math.max(1.5, Math.min(2.6, (0.95 * Math.min(vw, vh * 0.6)) / (box.height || 1)));
+    const dx = vw / 2 - (box.left + box.width / 2);
+    const dy = vh * 0.45 - (box.top + box.height * 0.56);
+    host.style.setProperty('--zoom', `translate(${dx}px, ${dy}px) scale(${scale})`);
+    host.classList.add('zooming');
+    document.documentElement.classList.add('hatch-focus');
+  }
+
+  function zoomOut() {
+    host.classList.remove('zooming');
+    host.style.removeProperty('--zoom');
+    document.documentElement.classList.remove('hatch-focus');
   }
 
   // burst: whether the shell already broke. Skipped earlier, the flock bursts
@@ -247,6 +268,7 @@ export function initEffects({ search, reduceMotion }) {
         revealed = true;
         hatching = false;
         listen(false);
+        document.documentElement.classList.remove('hatch-focus');
         if (screen) { screen.classList.remove('hatching'); screen.inert = false; }
         reveal();
         afterwards?.();
@@ -268,9 +290,11 @@ export function initEffects({ search, reduceMotion }) {
         }
         overlay.setFlock(0);
         if (screen) { screen.classList.add('hatching'); screen.inert = true; }
+        zoomIn();
         sequence = createSequence({
           run: () => egg.hatch({
-            // After a skip the egg may still be breaking off-screen: stay quiet.
+            // Each peck and the seam crack. After a skip the egg may still be
+            // breaking off-screen: stay quiet.
             onCrack: () => { if (!revealed) sound.play('crack'); },
             onBurst: (p) => {
               if (revealed) return;
@@ -297,7 +321,7 @@ export function initEffects({ search, reduceMotion }) {
       if (kind !== 'cover') clearTimeout(releaseTimer);
       // Back from the Summary's exit (or any shape): the flock flies free again.
       overlay.release();
-      const scene = sceneFor(kind, stats, persona);
+      const scene = preview ?? sceneFor(kind, stats, persona);
       sky.set(scene.sky);
       overlay.setParticles(scene.particles);
       sound.ambient(scene.sound);
@@ -336,6 +360,7 @@ export function initEffects({ search, reduceMotion }) {
       $('gate').hidden = true;
       home.parent.insertBefore(host, home.next);
       host.classList.remove('fading');
+      zoomOut();
       egg?.reset(1);
     },
 

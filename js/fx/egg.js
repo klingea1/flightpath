@@ -1,5 +1,6 @@
-// The egg in WebGL (ogl): a lit, speckled shell that cracks along a seeded
-// seam, loses its cap and throws shards. Same API as egg-flat.js. Throws on
+// The egg in WebGL (ogl): a lit, speckled shell. The chick pecks three star
+// cracks that flake open, then a crack runs round a seeded seam, the cap
+// comes off and shards fly (timeline in hatch.js). Same API as egg-flat.js. Throws on
 // creation if the shaders don't link; hatch() rejects if the context is lost.
 import { Renderer } from '../../vendor/ogl-1.0.11/core/Renderer.js';
 import { Camera } from '../../vendor/ogl-1.0.11/core/Camera.js';
@@ -9,14 +10,14 @@ import { Mesh } from '../../vendor/ogl-1.0.11/core/Mesh.js';
 import { Geometry } from '../../vendor/ogl-1.0.11/core/Geometry.js';
 import { Sphere } from '../../vendor/ogl-1.0.11/extras/Sphere.js';
 import { crackSeam, rng } from './seed.js';
+import { hatchPhase, hatchEvents, pipPoints, SEAM } from './hatch.js';
 
 const WOBBLE = [
   { amp: 2, period: 4000, hop: 0 },
   { amp: 6, period: 800, hop: 0 },
   { amp: 10, period: 420, hop: 0.06 },
 ];
-const CRACK_MS = 900, OPEN_MS = 800;
-const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const ZOOM_DPR = 2.2; // the page zooms in on the egg: render sharper while it does
 const DEG = Math.PI / 180;
 
 const vertex = /* glsl */ `
@@ -44,7 +45,11 @@ void main() {
 
 const fragment = /* glsl */ `
 precision highp float;
-uniform float uCrack;   // 0..1, how far the crack has spread round the egg
+uniform float uCrack;   // 0..1, how far the seam crack has spread round the egg
+uniform vec3 uPipA;     // the three pecks: angle (0 faces the camera)
+uniform vec3 uPipY;     // … height as a fraction of the egg
+uniform vec3 uPip;      // … how far each star crack has spread, 0..1
+uniform vec3 uHole;     // … how far each flake has chipped away, 0..1
 uniform float uPart;    // 0 whole, 1 cap (above the seam), -1 bottom
 uniform float uSeed;
 uniform float uAlpha;
@@ -59,6 +64,29 @@ float noise(vec3 p) {
   f = f * f * (3.0 - 2.0 * f);
   return mix(mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x), mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
              mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x), mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+
+// One peck: a small star of jagged cracks, and later a dark hole where a
+// flake chipped off, with a pale broken rim.
+vec3 peck(vec3 col, float a, float y, float grow, float hole, float i) {
+  if (grow <= 0.0) return col;
+  float py = y * 2.0 - 1.0, pr = sqrt(max(0.0, 1.0 - py * py));
+  vec3 P = vec3(sin(a) * pr, py, cos(a) * pr);
+  vec3 d = vObj - P;
+  float dist = length(d);
+  if (dist > 0.4) return col;
+  vec3 T = vec3(cos(a), 0.0, -sin(a));
+  float th = atan(d.y, dot(d, T));
+  float s = th / 6.2832 * 6.0 + i * 0.37 + (noise(vObj * 38.0 + i) - 0.5) * 0.5;
+  float rid = floor(s + 0.5);
+  float f = abs(fract(s + 0.5) - 0.5) * 1.047 * dist;
+  float len = (0.14 + 0.22 * hash(vec3(rid, i, 3.0))) * grow;
+  float ray = (1.0 - smoothstep(0.0, 0.006 + 0.01 * (1.0 - dist / 0.4), f)) * (1.0 - smoothstep(len * 0.6, len, dist));
+  col = mix(col, vec3(0.16, 0.09, 0.04), ray);
+  float hr = 0.085 * hole * (0.7 + 0.6 * noise(vec3(th * 1.6, i, 7.0)));
+  if (hole > 0.0 && dist < hr + 0.016) col = vec3(0.98, 0.94, 0.86);
+  if (hole > 0.0 && dist < hr) col = vec3(0.07, 0.045, 0.03) + vec3(0.05, 0.03, 0.01) * (dist / hr);
+  return col;
 }
 
 void main() {
@@ -94,6 +122,9 @@ void main() {
   float zig = (fract(a * 9.0) - 0.5) * 0.012;
   float line = 1.0 - smoothstep(0.0, 0.006 + 0.004 * uCrack, abs(side + zig));
   col = mix(col, vec3(0.22, 0.13, 0.07), line * on * (uPart == 0.0 ? 1.0 : 0.6));
+  col = peck(col, uPipA.x, uPipY.x, uPip.x, uHole.x, 0.0);
+  col = peck(col, uPipA.y, uPipY.y, uPip.y, uHole.y, 1.0);
+  col = peck(col, uPipA.z, uPipY.z, uPip.z, uHole.z, 2.0);
   gl_FragColor = vec4(col, uAlpha);
 }`;
 
@@ -138,17 +169,28 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
   camera.position.set(0, 0, 6.2);
   const scene = new Transform();
 
-  const uniforms = { uCrack: { value: 0 }, uSeed: { value: (seed % 1000) / 10 }, uAlpha: { value: 1 } };
+  const uniforms = {
+    uCrack: { value: 0 }, uSeed: { value: (seed % 1000) / 10 }, uAlpha: { value: 1 },
+    uPipA: { value: [0, 0, 0] }, uPipY: { value: [0, 0, 0] }, uPip: { value: [0, 0, 0] }, uHole: { value: [0, 0, 0] },
+  };
   const makeProgram = (part) => {
     const p = new Program(gl, { vertex, fragment, cullFace: null, transparent: true, uniforms: { ...uniforms, uPart: { value: part }, uAlpha: { value: 1 } } });
     if (!gl.getProgramParameter(p.program, gl.LINK_STATUS)) throw new Error('Egg shader failed to link');
     p.uniforms.uCrack = uniforms.uCrack;
     p.uniforms.uSeed = uniforms.uSeed;
+    for (const k of ['uPipA', 'uPipY', 'uPip', 'uHole']) p.uniforms[k] = uniforms[k];
     return p;
   };
   const sphere = new Sphere(gl, { radius: 1, widthSegments: 96, heightSegments: 64 });
   let seam = crackSeam(seed);
   sphere.addAttribute('seamY', { size: 1, data: seamAttribute(sphere, seam) });
+  function placePips() {
+    const p = pipPoints(seed, seam);
+    uniforms.uPipA.value = p.map((q) => q.a);
+    uniforms.uPipY.value = p.map((q) => q.y);
+    return p;
+  }
+  let pips = placePips();
 
   const pivot = new Transform();             // wobble rocks the egg on its base
   pivot.position.y = -1.0;
@@ -162,7 +204,9 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
   cap.setParent(egg);
 
   const shardProgram = new Program(gl, { vertex: shardVertex, fragment: shardFragment, cullFace: null, transparent: true, uniforms: { uAlpha: { value: 1 } } });
-  let shards = [];
+  let shards = [];  // the burst's pieces, in the scene
+  let flakes = [];  // chips off the pecks, in the egg's own frame
+  let jolt = 0;     // each peck knocks the egg
 
   let level = 0, raf = 0, hatch = null, lost = false;
   const onLost = (e) => {
@@ -189,16 +233,52 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
     scene.position.y = -(host.top + host.height / 2 - (box.top + ch / 2)) * perPx - 0.3;
   }
 
+  // A triangle of shell. Each piece fades on its own (mesh.alpha), sharing one program.
+  function shardMesh(r) {
+    const geometry = new Geometry(gl, {
+      position: { size: 3, data: new Float32Array([-r, -r * 0.6, 0, r, 0, 0, -r * 0.4, r * 0.8, 0]) },
+      normal: { size: 3, data: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]) },
+    });
+    const mesh = new Mesh(gl, { geometry, program: shardProgram });
+    mesh.alpha = 1;
+    mesh.onBeforeRender(() => { shardProgram.uniforms.uAlpha.value = mesh.alpha; });
+    return mesh;
+  }
+
+  // A peck's flake chips off: three small pieces pop out of the hole and drop.
+  function chip(i) {
+    const random = rng(seed ^ (0xf1a + i));
+    const p = pips[i];
+    const py = p.y * 2 - 1, pr = Math.sqrt(1 - py * py), k = 0.78 * (1 - 0.12 * py);
+    const at = [Math.sin(p.a) * pr * k, py, Math.cos(p.a) * pr * k];
+    for (let j = 0; j < 3; j++) {
+      const mesh = shardMesh(0.035 + random() * 0.035);
+      mesh.setParent(egg);
+      const out = 0.9 + random() * 0.8;
+      flakes.push({
+        mesh, born: performance.now(),
+        at: at.map((c, n) => c * 1.02 + (n === 1 ? 0 : (random() - 0.5) * 0.03)),
+        v: [at[0] * out + (random() - 0.5) * 0.6, 0.6 + random() * 0.9, at[2] * out + 0.4],
+        spin: [(random() - 0.5) * 18, (random() - 0.5) * 18, (random() - 0.5) * 18],
+      });
+    }
+  }
+
+  function moveFlakes(now) {
+    for (const f of flakes) {
+      const k = (now - f.born) / 1000;
+      f.mesh.position.set(f.at[0] + f.v[0] * k, f.at[1] + f.v[1] * k - 4.9 * k * k, f.at[2] + f.v[2] * k);
+      f.mesh.rotation.set(f.spin[0] * k, f.spin[1] * k, f.spin[2] * k);
+      f.mesh.alpha = Math.max(0, 1 - k / 0.7);
+    }
+  }
+
   function makeShards() {
     const random = rng(seed ^ 0x51ab);
     dropShards();
     shards = Array.from({ length: 12 }, () => {
       const r = 0.08 + random() * 0.12;
-      const geometry = new Geometry(gl, {
-        position: { size: 3, data: new Float32Array([-r, -r * 0.6, 0, r, 0, 0, -r * 0.4, r * 0.8, 0]) },
-        normal: { size: 3, data: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]) },
-      });
-      const mesh = new Mesh(gl, { geometry, program: shardProgram });
+      const mesh = shardMesh(r);
       const a = random() * Math.PI * 2;
       const at = [Math.sin(a) * 0.7, 0.45 + random() * 0.3, Math.cos(a) * 0.7];
       return { mesh, at, v: [at[0] * 3.2, 2.2 + random() * 2.2, at[2] * 2 + 1.2], spin: [(random() - 0.5) * 14, (random() - 0.5) * 14, (random() - 0.5) * 14] };
@@ -211,33 +291,44 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
     const wb = WOBBLE[level];
     const t = hatch ? now - hatch.start : -1;
     const calm = t >= 0 ? 0.3 : 1;
-    pivot.rotation.z = calm * wb.amp * DEG * Math.sin((now / wb.period) * 2 * Math.PI);
-    pivot.position.y = -1.0 + (t >= 0 ? 0 : wb.hop * Math.abs(Math.sin((now / wb.period) * 2 * Math.PI)));
+    jolt *= 0.9;
+    pivot.rotation.z = calm * wb.amp * DEG * Math.sin((now / wb.period) * 2 * Math.PI) + jolt * 5 * DEG * Math.sin(now * 0.07);
+    pivot.position.y = -1.0 + (t >= 0 ? jolt * 0.04 : wb.hop * Math.abs(Math.sin((now / wb.period) * 2 * Math.PI)));
+    moveFlakes(now);
     if (t >= 0) {
-      uniforms.uCrack.value = easeOut(Math.min(1, t / CRACK_MS));
-      if (t >= CRACK_MS) {
-        const k = (t - CRACK_MS) / 1000;
-        const open = easeOut(Math.min(1, (t - CRACK_MS) / OPEN_MS));
-        if (!hatch.burst) {
+      for (const e of hatchEvents(hatch.prev, t)) {
+        if (e.type === 'pip') { jolt = 1; hatch.onCrack?.(e); }
+        if (e.type === 'flake') chip(e.i);
+        if (e.type === 'seam') { jolt = 0.7; hatch.onCrack?.(e); }
+        if (e.type === 'burst') {
           hatch.burst = true;
           makeShards();
           shards.forEach((s) => s.mesh.setParent(scene));
           const host = (canvas.parentElement ?? canvas).getBoundingClientRect();
           hatch.onBurst?.({ x: host.left + host.width / 2, y: host.top + host.height * 0.35 });
         }
+      }
+      hatch.prev = t;
+      const ph = hatchPhase(t);
+      uniforms.uPip.value = ph.pips;
+      uniforms.uHole.value = ph.holes;
+      uniforms.uCrack.value = ph.seam;
+      if (hatch.burst) {
+        const k = (t - SEAM[1]) / 1000;
+        const open = ph.open;
         cap.position.set(open * 0.9, open * 2.4, open * 0.6);
         cap.rotation.set(open * 0.8, 0, -open * 1.4);
         bottom.position.y = -open * 0.4;
-        const fade = 1 - Math.max(0, (t - CRACK_MS - OPEN_MS * 0.4) / (OPEN_MS * 0.6));
+        const fade = 1 - Math.max(0, (open - 0.4) / 0.6);
         cap.program.uniforms.uAlpha.value = fade;
         bottom.program.uniforms.uAlpha.value = fade;
-        shardProgram.uniforms.uAlpha.value = fade;
         for (const s of shards) {
           s.mesh.position.set(s.at[0] + s.v[0] * k, s.at[1] + s.v[1] * k - 4.9 * k * k, s.at[2] + s.v[2] * k);
           s.mesh.rotation.set(s.spin[0] * k, s.spin[1] * k, s.spin[2] * k);
+          s.mesh.alpha = fade;
         }
       }
-      if (t >= CRACK_MS + OPEN_MS) {
+      if (ph.done) {
         const done = hatch.resolve;
         hatch = null;
         cancelAnimationFrame(raf); raf = 0;
@@ -251,12 +342,17 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
 
   // Each hatch makes new shards; free the old ones' GPU buffers.
   function dropShards() {
-    for (const s of shards) { s.mesh.setParent(null); s.mesh.geometry.remove(); }
+    for (const s of [...shards, ...flakes]) { s.mesh.setParent(null); s.mesh.geometry.remove(); }
     shards = [];
+    flakes = [];
   }
 
   function restore() {
     uniforms.uCrack.value = 0;
+    uniforms.uPip.value = [0, 0, 0];
+    uniforms.uHole.value = [0, 0, 0];
+    jolt = 0;
+    renderer.dpr = dpr;
     for (const m of [cap, bottom]) { m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.program.uniforms.uAlpha.value = 1; }
     dropShards();
   }
@@ -271,8 +367,9 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
     hatch({ onCrack, onBurst } = {}) {
       if (lost) return Promise.reject(new Error('WebGL context lost'));
       return new Promise((resolve, reject) => {
-        hatch = { start: performance.now(), resolve, reject, onBurst, burst: false };
-        onCrack?.();
+        hatch = { start: performance.now(), prev: -1, resolve, reject, onCrack, onBurst, burst: false };
+        renderer.dpr = Math.min(3, dpr * ZOOM_DPR);
+        resize();
         if (!raf) raf = requestAnimationFrame(frame);
       });
     },
@@ -281,6 +378,7 @@ export function createEgg(canvas, { seed, onLost: lostCallback }) {
       seam = crackSeam(seed);
       sphere.attributes.seamY.data = seamAttribute(sphere, seam);
       sphere.attributes.seamY.needsUpdate = true;
+      pips = placePips();
       uniforms.uSeed.value = (seed % 1000) / 10;
       // A hatch still running (the deck was already revealed by a skip) ends here.
       hatch?.resolve();

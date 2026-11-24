@@ -1,15 +1,14 @@
 // The egg painted in 2D: the fallback when WebGL isn't there, and the still
 // egg for reduced motion. Same API as egg.js.
 import { crackSeam, rng } from './seed.js';
+import { hatchPhase, hatchEvents, pipPoints, SEAM } from './hatch.js';
 
 const WOBBLE = [
   { amp: 2, period: 4000, hop: 0 },
   { amp: 6, period: 800, hop: 0 },
   { amp: 10, period: 420, hop: 6 },
 ];
-const CRACK_MS = 900, OPEN_MS = 800;
-
-const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const ZOOM_DPR = 2.2; // the page zooms in on the egg: paint sharper while it does
 
 export function createEgg(canvas, { seed, still = false }) {
   const ctx = canvas.getContext('2d');
@@ -17,11 +16,15 @@ export function createEgg(canvas, { seed, still = false }) {
   let speckles = [];
   let level = 0;
   let raf = 0;
-  let hatch = null; // { start, resolve, shards, onBurst, burst }
+  let hatch = null; // { start, prev, resolve, shards, onCrack, onBurst, burst }
+  let pips = pipPoints(seed, seam);
+  let flakes = [];  // chips off the pecks: { x, y, vx, vy, r, spin, born }
+  let jolt = 0;
+  let sharp = 1;    // resolution boost while zoomed in
   let w = 0, h = 0, rx = 0, ry = 0, cx = 0, cy = 0;
 
   function layout() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(3, Math.min(2, window.devicePixelRatio || 1) * sharp);
     // The canvas overflows its host (the nest box); the egg is placed by the host.
     const host = (canvas.parentElement ?? canvas).getBoundingClientRect();
     const box = canvas.getBoundingClientRect();
@@ -89,19 +92,80 @@ export function createEgg(canvas, { seed, still = false }) {
     ctx.save();
     eggPath(); ctx.clip();
     ctx.strokeStyle = 'rgba(70, 45, 25, 0.9)';
-    ctx.lineWidth = 1.4;
+    ctx.lineWidth = 0.8;
     ctx.beginPath();
     // Spreads both ways from the front; a small zigzag makes it read as a crack.
     let started = false;
     for (let i = -20; i <= 20; i++) {
       const u = i / 20;
       if (Math.abs(u) > progress) continue;
-      const y = seamAt(u) * ry + (i % 2 ? 1.5 : -1.5);
+      const y = seamAt(u) * ry + (i % 2 ? 0.9 : -0.9);
       if (started) ctx.lineTo(u * rx, y);
       else { ctx.moveTo(u * rx, y); started = true; }
     }
     ctx.stroke();
     ctx.restore();
+  }
+
+  // Where a peck sits on the egg's face, in egg units (x in rx, y in ry, -1 top).
+  const pipAt = (p) => ({ x: Math.sin(p.a) * rx, y: ((1 - p.y) * 2 - 1) * ry });
+
+  // A peck: a small star of jagged cracks, then a dark hole with a pale rim.
+  function paintPeck(i, grow, hole) {
+    if (grow <= 0) return;
+    const { x, y } = pipAt(pips[i]);
+    const random = rng(seed ^ (0x9ec + i));
+    ctx.save();
+    eggPath(); ctx.clip();
+    ctx.strokeStyle = 'rgba(60, 38, 20, 0.9)';
+    ctx.lineWidth = 0.7; // the egg is shown zoomed in, ~2x
+    ctx.beginPath();
+    for (let r = 0; r < 6; r++) {
+      const a = (r / 6) * Math.PI * 2 + random() * 0.6;
+      const len = ry * (0.13 + random() * 0.2) * grow;
+      ctx.moveTo(x, y);
+      for (let k = 1; k <= 3; k++) {
+        const d = (len * k) / 3, j = (random() - 0.5) * 0.7;
+        ctx.lineTo(x + Math.cos(a + j) * d, y + Math.sin(a + j) * d);
+      }
+    }
+    ctx.stroke();
+    if (hole > 0) {
+      const hr = ry * 0.09 * hole;
+      ctx.fillStyle = '#faf0dc';
+      ctx.beginPath(); ctx.arc(x, y, hr + 1.5, 0, 7); ctx.fill();
+      ctx.fillStyle = '#140c07';
+      ctx.beginPath();
+      for (let k = 0; k <= 8; k++) {
+        const a = (k / 8) * Math.PI * 2, rr = hr * (0.7 + 0.5 * random());
+        k ? ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      }
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function chip(i) {
+    const random = rng(seed ^ (0xf1a + i));
+    const { x, y } = pipAt(pips[i]);
+    for (let j = 0; j < 3; j++) {
+      flakes.push({ x, y, vx: (x / rx) * 90 + (random() - 0.5) * 80, vy: -60 - random() * 80, r: 2 + random() * 2.5,
+        spin: (random() - 0.5) * 16, born: performance.now() });
+    }
+  }
+
+  function paintFlakes(now) {
+    for (const fl of flakes) {
+      const k = (now - fl.born) / 1000;
+      if (k > 0.7) continue;
+      ctx.save();
+      ctx.globalAlpha = 1 - k / 0.7;
+      ctx.fillStyle = '#efe1c7';
+      ctx.translate(fl.x + fl.vx * k, fl.y + fl.vy * k + 300 * k * k);
+      ctx.rotate(fl.spin * k);
+      ctx.beginPath(); ctx.moveTo(-fl.r, -fl.r * 0.6); ctx.lineTo(fl.r, 0); ctx.lineTo(-fl.r * 0.4, fl.r * 0.8); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
   }
 
   function draw(now) {
@@ -110,20 +174,35 @@ export function createEgg(canvas, { seed, still = false }) {
     let angle = still ? 0 : wb.amp * Math.sin((now / wb.period) * 2 * Math.PI) * (Math.PI / 180);
     let hop = still ? 0 : wb.hop * Math.abs(Math.sin((now / wb.period) * 2 * Math.PI));
     const t = hatch ? now - hatch.start : -1;
-    if (t >= 0) { angle *= 0.3; hop = 0; }
+    const ph = hatchPhase(Math.max(0, t));
+    if (t >= 0) {
+      for (const e of hatchEvents(hatch.prev, t)) {
+        if (e.type === 'pip') { jolt = 1; hatch.onCrack?.(e); }
+        if (e.type === 'flake') chip(e.i);
+        if (e.type === 'seam') { jolt = 0.7; hatch.onCrack?.(e); }
+      }
+      hatch.prev = t;
+      jolt *= 0.9;
+      angle = angle * 0.3 + jolt * 0.09 * Math.sin(now * 0.07);
+      hop = jolt * 2;
+    }
 
     // Nest shadow.
     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
     ctx.beginPath(); ctx.ellipse(cx, cy + ry * 0.98, rx * 1.1, ry * 0.14, 0, 0, 7); ctx.fill();
 
-    const open = t > CRACK_MS ? easeOut(Math.min(1, (t - CRACK_MS) / OPEN_MS)) : 0;
+    const open = t >= 0 ? ph.open : 0;
     ctx.save();
     ctx.translate(cx, cy + ry - hop);
     ctx.rotate(angle);
     ctx.translate(0, -ry);
     if (!open) {
       paintShell(0);
-      if (t >= 0) paintCrack(easeOut(Math.min(1, t / CRACK_MS)));
+      if (t >= 0) {
+        if (ph.seam > 0) paintCrack(ph.seam);
+        ph.pips.forEach((g, i) => paintPeck(i, g, ph.holes[i]));
+      }
+      paintFlakes(now);
     } else {
       ctx.save();
       ctx.globalAlpha = 1 - open;
@@ -137,7 +216,7 @@ export function createEgg(canvas, { seed, still = false }) {
       paintShell(1);
       ctx.restore();
       for (const s of hatch.shards) {
-        const k = (t - CRACK_MS) / 1000;
+        const k = (t - SEAM[1]) / 1000;
         ctx.fillStyle = `rgba(239, 225, 199, ${1 - open})`;
         ctx.save();
         ctx.translate(s.x + s.vx * k, s.y + s.vy * k + 300 * k * k);
@@ -148,12 +227,13 @@ export function createEgg(canvas, { seed, still = false }) {
     }
     ctx.restore();
 
-    if (hatch && !hatch.burst && t >= CRACK_MS) {
+    if (hatch && !hatch.burst && t >= SEAM[1]) {
       hatch.burst = true;
-      const box = canvas.getBoundingClientRect();
-      hatch.onBurst?.({ x: box.left + cx, y: box.top + cy - ry * 0.4 });
+      // The page may be zoomed in on the egg: scale canvas units to the screen.
+      const box = canvas.getBoundingClientRect(), z = box.width / (w || 1);
+      hatch.onBurst?.({ x: box.left + cx * z, y: box.top + (cy - ry * 0.4) * z });
     }
-    if (hatch && t >= CRACK_MS + OPEN_MS) {
+    if (hatch && ph.done) {
       const done = hatch.resolve;
       hatch = null;
       ctx.clearRect(0, 0, w, h);
@@ -174,13 +254,14 @@ export function createEgg(canvas, { seed, still = false }) {
       const random = rng(seed ^ 0x51ab);
       return new Promise((resolve) => {
         hatch = {
-          start: performance.now(), resolve, onBurst, burst: false,
+          start: performance.now(), prev: -1, resolve, onCrack, onBurst, burst: false,
           shards: Array.from({ length: 12 }, () => ({
             x: (random() - 0.5) * rx * 1.4, y: -ry * 0.1 + (random() - 0.5) * ry * 0.4, r: 3 + random() * 5,
             vx: (random() - 0.5) * 220, vy: -120 - random() * 160, spin: (random() - 0.5) * 12,
           })),
         };
-        onCrack?.();
+        sharp = ZOOM_DPR;
+        layout();
         if (!raf) raf = requestAnimationFrame(draw);
       });
     },
@@ -188,6 +269,10 @@ export function createEgg(canvas, { seed, still = false }) {
       seed = s;
       seam = crackSeam(seed);
       speckle(seed);
+      pips = pipPoints(seed, seam);
+      flakes = [];
+      jolt = 0;
+      sharp = 1;
       // A hatch still running (the deck was already revealed by a skip) ends here.
       hatch?.resolve();
       hatch = null;

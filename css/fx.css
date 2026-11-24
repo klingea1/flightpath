@@ -1,6 +1,7 @@
 /* The hatch, the flock and each card's sky. Only active when <html> has fx-on
-   (effects mode is not "off"). Skies stay dark: the deck bar and buttons sit on
-   them, and --ink-soft must keep 4.5:1 against every shade used here. */
+   (effects mode is not "off"). Skies stay dark where text sits on them: the
+   deck bar's links along the top need --ink-soft at 4.5:1. The morning skies'
+   golden glow stays in the bottom half, behind the card and the solid buttons. */
 
 #fx-sky, #fx-overlay { display: none; }
 
@@ -22,8 +23,16 @@
 
 .sky-neutral { background: linear-gradient(180deg, #120f2a 0%, #1b1638 60%, #221a40 100%); }
 .sky-dusk    { background: linear-gradient(180deg, #120f2a 0%, #211a48 55%, #3a1f45 88%, #4a2338 100%); }
-.sky-sunrise { background: linear-gradient(180deg, #120f2a 0%, #241c4c 50%, #3e2347 85%, #4d2a33 100%); }
-.sky-dawn    { background: linear-gradient(180deg, #14132e 0%, #22264a 55%, #34345a 85%, #43394f 100%); }
+.sky-sunrise {
+  background:
+    radial-gradient(130% 50% at 50% 104%, rgba(255, 200, 110, 0.8) 0%, rgba(250, 150, 80, 0.5) 30%, rgba(220, 100, 90, 0) 72%),
+    linear-gradient(180deg, #120f2a 0%, #241c4c 45%, #4a2a4f 78%, #7a3f3f 100%);
+}
+.sky-dawn {
+  background:
+    radial-gradient(140% 46% at 50% 104%, rgba(255, 196, 90, 0.85) 0%, rgba(250, 160, 70, 0.5) 32%, rgba(210, 120, 90, 0) 75%),
+    linear-gradient(180deg, #14132e 0%, #22264a 48%, #3c3a5c 76%, #6a4c52 100%);
+}
 .sky-day     { background: linear-gradient(180deg, #0f2340 0%, #16305a 60%, #1d3a63 100%); }
 .sky-golden  { background: linear-gradient(180deg, #1a1430 0%, #3a2238 60%, #4f2e26 92%, #57331f 100%); }
 .sky-night   { background: linear-gradient(180deg, #05060f 0%, #0b0e22 55%, #111532 100%); }
@@ -42,8 +51,26 @@
 .nest { position: absolute; left: 8%; right: 8%; bottom: 4%; width: 84%; height: 22%; }
 #egg-host.fading { opacity: 0; transition: opacity 400ms ease; }
 
-/* Hatching: the upload screen stays put until the deck is revealed. */
-.fx-on .hatching .upload-inner > :not(#egg-host):not(#gate-open) { opacity: 0; transition: opacity 300ms ease; }
+/* Hatching: everything round the egg fades away, the sky dims to a spotlight,
+   and the egg glides to the middle of the screen as it grows (index.js sets
+   --zoom). The screen clips, so the grown egg never makes the page scroll. */
+.fx-on .hatching { overflow: clip; }
+.fx-on .hatching .upload-inner > :not(#egg-host):not(#gate-open),
+.fx-on .hatching #gate-open > span { opacity: 0; transition: opacity 600ms ease; }
+.fx-on #egg-host.zooming {
+  transform: var(--zoom);
+  transform-origin: 50% 56%;
+  transition: transform 2400ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+#fx-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0) 12%, rgba(4, 3, 12, 0.7) 70%);
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+.hatch-focus #fx-sky::after { opacity: 1; }
 
 /* The murmuration hides the real number on screen only. The frame, not the
    card, carries the class, so a saved image can never catch it hidden. */

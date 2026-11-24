@@ -4,7 +4,9 @@ const scene = (sky, particles = null, sound = 'wind') => ({ sky, particles, soun
 
 const NEUTRAL = scene('neutral');
 const DAWN = scene('dawn', 'mist', 'chorus');
-const GOLDEN = scene('golden');
+// Evening: a pair of owl eyes blinks open in the margin now and then.
+const GOLDEN = scene('golden', 'eyes', 'owl');
+const NIGHT = scene('night', 'stars', 'owl');
 
 const PERSONAS = {
   dawn: DAWN,
@@ -20,16 +22,33 @@ function clockScene(startHours) {
   if (h >= 4 && h < 9) return DAWN;
   if (h >= 9 && h < 17) return scene('day');
   if (h >= 17 && h < 20) return GOLDEN;
-  return scene('night', 'stars', 'owl');
+  return NIGHT;
 }
+
+const SEASONS = {
+  winter: scene('winter', 'snow'),
+  spring: scene('spring', 'blossoms', 'chorus'),
+  summer: scene('summer', 'haze'),
+  autumn: scene('autumn', 'leaves'),
+};
 
 function monthsScene(monthly) {
   if (!Math.max(...monthly)) return NEUTRAL;
   const m = peakOf(monthly);
-  if (m === 11 || m < 2) return scene('winter', 'snow');
-  if (m < 5) return scene('spring', 'blossoms', 'chorus');
-  if (m < 8) return scene('summer', 'haze');
-  return scene('autumn', 'leaves');
+  if (m === 11 || m < 2) return SEASONS.winter;
+  if (m < 5) return SEASONS.spring;
+  if (m < 8) return SEASONS.summer;
+  return SEASONS.autumn;
+}
+
+const PREVIEWS = {
+  dawn: DAWN, day: scene('day'), evening: GOLDEN, night: NIGHT, ...SEASONS,
+  sunrise: scene('sunrise', null, 'chorus'), dusk: scene('dusk'), fireflies: PERSONAS.sitspot, lake: PERSONAS.lakeshore,
+};
+
+/** ?scene=<name> puts every card in one scene, to preview it. Unknown names: null. */
+export function previewScene(name) {
+  return Object.hasOwn(PREVIEWS, name ?? '') ? PREVIEWS[name] : null;
 }
 
 /** kind: the card's class without "card-" (cover, headline, clock, …). */
