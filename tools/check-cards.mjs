@@ -104,7 +104,10 @@ let failed = false;
 try {
   await send('Runtime.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1300, height: 1700, deviceScaleFactor: 1, mobile: false });
-  await send('Page.navigate', { url });
+  // The hatch, flock and skies are page effects, not part of a card, and would
+  // land in the screenshots. Turn them off so contrast is checked on the card alone.
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await send('Page.navigate', { url: `${url}?fx=off` });
   // Module scripts have run by the load event, so the upload handler is attached.
   await waitFor(() => run(() => document.readyState === 'complete' && Boolean(document.querySelector('input[type=file]'))), 'the upload page');
 
